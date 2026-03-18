@@ -7,8 +7,8 @@ CueCoin (CUE) is the **native BEP-20 token** of the CueCoin skill-based gaming e
 ---
 
 ## Ecosystem Flow Diagram
-
 `graph LR
+
     %% Core Token & Pools
     CUE["CueCoin (CUE)"] --> LP["Auto-LP Engine"]
     CUE --> P2E["CueRewardsPool (P2E Rewards + NFT Bonuses)"]
@@ -16,7 +16,7 @@ CueCoin (CUE) is the **native BEP-20 token** of the CueCoin skill-based gaming e
     CUE --> DAO["CueDAO Treasury (Governance)"]
     CUE --> DEV["Dev Multisig (Operations, Payroll, Marketing)"]
     CUE --> BURN["Burn (0xdead)"]
-
+    
     %% NFT & Marketplace
     CUE --> NFT["CueNFT (NFT Mint & Rewards)"]
     NFT --> MARKET["CueMarketplace (NFT Trading)"]
