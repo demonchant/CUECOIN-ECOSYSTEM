@@ -1,155 +1,146 @@
-# CueCoin (CUECOIN) Ecosystem
+# ![CueCoin Logo](./assets/logo.png) CueCoin Ecosystem
 
-![CueCoin Logo](./assets/logo.png)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-CueCoin (CUECOIN) is the **native BEP-20 token** of the CueCoin skill-based gaming ecosystem on the **BNB Smart Chain (BSC)**. It powers a self-sustaining, governance-ready ecosystem with play-to-earn games, tournaments, and DAO participation.
-
----
-
-## Table of Contents
-
-- [Project Overview](#project-overview)  
-- [Key Features](#key-features)  
-- [Tokenomics](#tokenomics)  
-- [Ecosystem Flow](#ecosystem-flow)  
-- [Governance](#governance)  
-- [Velocity Shield & Whale Guard](#velocity-shield--whale-guard)  
-- [Contracts](#contracts)  
-- [Deployment & Setup](#deployment--setup)  
-- [License](#license)  
+CueCoin (CUE) is the **native BEP-20 token** of the CueCoin skill-based gaming ecosystem on the **BNB Smart Chain**. It powers **skill gaming, NFT trading, P2E rewards, tournaments, and governance**. The ecosystem is fully self-sustaining, with automatic liquidity, deflationary mechanics, and timelocked pool and oracle updates for maximum security.
 
 ---
 
-## Project Overview
-
-CueCoin is designed to provide a **secure, decentralized, and gamified token economy** for skill-based gaming. Its architecture includes:
-
-- Fixed **1 Billion CUECOIN supply** – no minting after deployment  
-- **Vortex Tax** for ecosystem sustainability  
-- **Auto-LP Engine** for liquidity management  
-- **Velocity Shield** for market stability  
-- **Whale Guard** to prevent large manipulative trades  
-- Governance-ready using **ERC20Votes** for DAO proposals  
-
----
-
-## Key Features
-
-- **BEP-20 Token**: Fully compatible with BSC ecosystem  
-- **Self-sustaining economy**: Play-to-earn, tournaments, DAO funding  
-- **Timelocked updates**: Pool & oracle updates have a 48-hour timelock  
-- **Anti-whale & Anti-dump protections**: Automatic tax surcharges and shields  
-- **Governance-ready**: Delegation and snapshot voting via CueDAO  
-
----
-
-## Tokenomics
-
-| Feature                  | Allocation |
-|---------------------------|------------|
-| **Burn**                  | 1.00%      |
-| **Auto-LP**               | 1.00%      |
-| **P2E Rewards Pool**      | 1.00%      |
-| **Tournament Pool**       | 0.50%      |
-| **DAO Treasury**          | 0.25%      |
-| **Dev Multisig**          | 0.25%      |
-| **Total Vortex Tax**      | 4.00%      |
-
-**Additional mechanics:**
-
-- **Velocity Shield:** Activates +4% Auto-LP if TWAP drops >15% in 1 hour and LP ≥ 50 BNB  
-- **Whale Guard:** Extra 2% burn on transactions >0.1% of total supply  
-
----
-
-## Ecosystem Flow
-
-### Mermaid Diagram (GitHub supported)
+## 📈 Ecosystem Flow Diagram
 
 ```mermaid
-flowchart LR
-    A[User Transfer] --> B[Vortex Tax 4%]
-    B --> C[Burn 1% → 0xdead]
-    B --> D[Auto-LP 1% → Contract → Liquidity Pool]
-    B --> E[P2E Rewards 1% → Rewards Pool]
-    B --> F[Tournament 0.5% → Tournament Pool]
-    B --> G[DAO 0.25% → DAO Treasury]
-    B --> H[Dev Multisig 0.25% → Dev Wallet]
+graph LR
+    %% ── Core Token & Pools ──
+    CUE["CueCoin (CUE)"] --> LP["Auto-LP Engine"]
+    CUE --> P2E["CueRewardsPool (P2E Rewards + NFT Bonuses)"]
+    CUE --> TOURN["CueTournament (Prize Pool)"]
+    CUE --> DAO["CueDAO Treasury (Governance)"]
+    CUE --> DEV["Dev Multisig (Operations, Payroll, Marketing)"]
+    CUE --> BURN["Burn (0xdead)"]
 
-    subgraph Shield
-        B2[Velocity Shield +4% LP] 
-    end
-ASCII Fallback (for non-Mermaid renderers)
-User Transfer
-     |
-   Vortex Tax 4%
-   /   |    \    \
-Burn  Auto-LP  P2E  Tournament
-1%     1%      1%     0.5%
- |      |      |       |
-0xdead LP Pool Rewards Tournament Pool
-        |
-      DAO Treasury 0.25%
-      Dev Multisig 0.25%
-[Velocity Shield +4% LP]
-[Whale Guard +2% Burn]
-Auto-LP Engine: Accumulates LP slice and automatically swaps/ adds liquidity when threshold is reached
+    %% ── NFT & Marketplace ──
+    CUE --> NFT["CueNFT (NFT Mint & Rewards)"]
+    NFT --> MARKET["CueMarketplace (NFT Trading)"]
 
-Tax Distribution: All slices are sent to respective pools automatically
+    %% ── Gaming & Skills ──
+    CUE --> SNG["CueSitAndGo (Skill Gaming Tournaments)"]
+    CUE --> TASK["CueTaskRegistry (Skill Tasks)"]
 
-DAO Treasury: Receives rounding dust to ensure no tokens are lost
-Governance
+    %% ── Referral & Incentives ──
+    CUE --> REF["CueReferral (Referral Rewards)"]
 
-CueCoin integrates ERC20Votes and ERC20Permit for governance
+    %% ── Escrow & Vesting ──
+    CUE --> ESC["CueEscrow (Locked Payments)"]
+    CUE --> VEST["CueVesting (Team / Investor Vesting)"]
 
-Delegation required: Holders must delegate(self) or delegate(other)
+    %% ── Bridge & Airdrop ──
+    CUE --> BRIDGE["CueBridge (Cross-Chain Transfers)"]
+    CUE --> AIRDROP["CueAirdrop (Token Distribution)"]
 
-Votes are timestamp-aligned (ERC-6372) to ensure historical accuracy
+    %% ── Flows / interactions
+    LP --> BURN
+    LP --> MARKET
+    P2E --> SNG
+    TOURN --> SNG
+    REF --> SNG
+    VEST --> DEV
+    ESC --> DEV
+💰 Tokenomics
 
-DAO can influence treasury, tournaments, and rewards allocations
-Velocity Shield & Whale Guard
+Name: CueCoin
 
-Velocity Shield: Prevents large dumps by increasing Auto-LP during 15%+ TWAP drops
+Symbol: CUECOIN
 
-Whale Guard: Adds 2% burn on any transaction exceeding 0.1% of total supply
+Chain: BNB Smart Chain (BEP-20)
 
-Automatic & Transparent: Both features work without manual intervention
-| Contract Name            | Purpose                                |
-| ------------------------ | -------------------------------------- |
-| `CueCoin.sol`            | Core CUECOIN token contract (BEP-20)   |
-| `CueAirdrop.sol`         | Handles token airdrops and user claims |
-| `CueBridge.sol`          | Cross-chain token bridge               |
-| `CueDAO.sol`             | Governance DAO contract                |
-| `CueEscrow.sol`          | Secure escrow for transactions         |
-| `CueLiquidityLocker.sol` | Locks LP tokens for security           |
-| `CueMarketplace.sol`     | NFT & in-game item marketplace         |
-| `CueNFT.sol`             | NFT minting and management             |
-| `CueRewardsPool.sol`     | Play-to-earn rewards distribution      |
-| `CueReferral.sol`        | Referral system & reward tracking      |
-| `CueSitAndGo.sol`        | Sit-and-go tournament logic            |
-| `CueTaskRegistry.sol`    | Task tracking for P2E & airdrops       |
-| `CueTournament.sol`      | Tournament prize distribution          |
-| `CueVesting.sol`         | Token vesting schedules                |
-Deployment addresses: To be updated after mainnet deployment
-Deployment & Setup
-Prerequisites
+Total Supply: 1,000,000,000 CUE (1B)
 
-Make sure you have the following installed:
+Decimals: 18
 
-Node.js
- (v18+ recommended)
+No mint function — fixed supply
 
-Hardhat
+Deflationary mechanics with burn address 0xdead| Destination  | Tax % | Purpose                                 |
+| ------------ | ----- | --------------------------------------- |
+| Burn         | 1%    | Permanent deflation                     |
+| Auto-LP      | 1%    | Deepens liquidity pool                  |
+| P2E Pool     | 1%    | Play-to-earn rewards & NFT bonuses      |
+| Tournament   | 0.5%  | Self-funding prize pools                |
+| DAO Treasury | 0.25% | Governance treasury                     |
+| Dev Multisig | 0.25% | Operations: payroll, servers, marketing |
+Velocity Shield (Automatic +4% LP)
 
-npm
- or yarn
+Activates if TWAP drops > 15% in 1 hour AND LP depth ≥ 50 BNB
 
-Metamask
- or another Web3 wallet
+Duration: 4 hours
 
-BSC Testnet/Mainnet account with BNB for gas
-git clone https://github.com/yourusername/CueCoin-Ecosystem.git
-cd CueCoin-Ecosystem/Contracts
-    subgraph Whale
-        B3[Whale Guard +2% Burn]
-    end
+Tax rises from 4% → 8%
+
+Fully automatic, cannot be triggered manually
+
+Whale Guard (+2% burn)
+🏗️ Contracts Overview
+| Contract               | Purpose                                |
+| ---------------------- | -------------------------------------- |
+| CueCoin.sol            | Core token with tax logic & governance |
+| CueNFT.sol             | NFT minting & rewards                  |
+| CueMarketplace.sol     | NFT trading marketplace                |
+| CueSitAndGo.sol        | Skill-based gaming tournaments         |
+| CueTaskRegistry.sol    | Skill task management for rewards      |
+| CueReferral.sol        | Referral rewards system                |
+| CueEscrow.sol          | Locked payments & escrow               |
+| CueVesting.sol         | Team/investor vesting                  |
+| CueBridge.sol          | Cross-chain token bridge               |
+| CueAirdrop.sol         | Token airdrop & distribution           |
+| CueRewardsPool.sol     | P2E reward pool                        |
+| CueTournament.sol      | Tournament prize pool                  |
+| CueDAO.sol             | Governance treasury                    |
+| CueLiquidityLocker.sol | LP token locking & timelocks           |
+
+Transactions > 0.1% of total supply (~1,000,000 CUE) pay extra 2% to burn
+
+Exempt: vesting, airdrops, ecosystem contracts🚀 Deployment Setup
+
+Install dependencies:
+
+npm install
+
+Configure hardhat.config.js or truffle-config.js with BSC mainnet/testnet RPC.
+
+Deploy CueCoin first:
+
+npx hardhat run scripts/deployCueCoin.js --network bscTestnet
+
+Deploy all pools & ecosystem contracts (replace addresses with CueCoin address):
+
+npx hardhat run scripts/deployEcosystem.js --network bscTestnet
+
+Configure oracles, timelocks, and trading:
+
+Set priceOracle & lpOracle
+
+Enable trading: cueCoin.enableTrading()
+
+Queue pool & oracle updates via timelock
+
+⚡ Features
+
+Automatic liquidity provision & burn mechanism
+
+Play-to-Earn reward system with NFT bonuses
+
+Skill-based gaming tournaments
+
+Referral incentives for players
+
+Vesting & escrow for team & investors
+
+DAO governance with ERC20Votes integration
+
+Velocity Shield & Whale Guard for anti-dump protection
+
+Cross-chain bridge & airdrop system for distribution
+
+📝 License
+
+This project is licensed under the MIT License — see the LICENSE
+ file for details.
