@@ -6,7 +6,7 @@ CueCoin (CUE) is the **native BEP-20 token** of the CueCoin skill-based gaming e
 
 ---
 
-## 📈 Ecosystem Flow Diagram
+## Ecosystem Flow Diagram
 
 ```mermaid
 graph LR
@@ -45,7 +45,9 @@ graph LR
     REF --> SNG
     VEST --> DEV
     ESC --> DEV
-💰 Tokenomics
+
+
+ Tokenomics
 
 Name: CueCoin
 
@@ -78,7 +80,8 @@ Tax rises from 4% → 8%
 Fully automatic, cannot be triggered manually
 
 Whale Guard (+2% burn)
-🏗️ Contracts Overview
+
+Contracts Overview
 | Contract               | Purpose                                |
 | ---------------------- | -------------------------------------- |
 | CueCoin.sol            | Core token with tax logic & governance |
@@ -98,7 +101,9 @@ Whale Guard (+2% burn)
 
 Transactions > 0.1% of total supply (~1,000,000 CUE) pay extra 2% to burn
 
-Exempt: vesting, airdrops, ecosystem contracts🚀 Deployment Setup
+Exempt: vesting, airdrops, ecosystem contracts
+
+Deployment Setup
 
 Install dependencies:
 
@@ -122,7 +127,7 @@ Enable trading: cueCoin.enableTrading()
 
 Queue pool & oracle updates via timelock
 
-⚡ Features
+ Features
 
 Automatic liquidity provision & burn mechanism
 
@@ -140,7 +145,7 @@ Velocity Shield & Whale Guard for anti-dump protection
 
 Cross-chain bridge & airdrop system for distribution
 
-📝 License
+ License
 
 This project is licensed under the MIT License — see the LICENSE
  file for details.
