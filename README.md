@@ -7,6 +7,7 @@ CueCoin (CUE) is the **native BEP-20 token** of the CueCoin skill-based gaming e
 ---
 
 ## Ecosystem Flow Diagram
+
 `graph LR
 
     %% Core Token & Pools
