@@ -8,9 +8,8 @@ CueCoin (CUE) is the **native BEP-20 token** of the CueCoin skill-based gaming e
 
 ## Ecosystem Flow Diagram
 
-```mermaid
-graph LR
-    %% ── Core Token & Pools ──
+`graph LR
+    %% Core Token & Pools
     CUE["CueCoin (CUE)"] --> LP["Auto-LP Engine"]
     CUE --> P2E["CueRewardsPool (P2E Rewards + NFT Bonuses)"]
     CUE --> TOURN["CueTournament (Prize Pool)"]
@@ -18,26 +17,26 @@ graph LR
     CUE --> DEV["Dev Multisig (Operations, Payroll, Marketing)"]
     CUE --> BURN["Burn (0xdead)"]
 
-    %% ── NFT & Marketplace ──
+    %% NFT & Marketplace
     CUE --> NFT["CueNFT (NFT Mint & Rewards)"]
     NFT --> MARKET["CueMarketplace (NFT Trading)"]
 
-    %% ── Gaming & Skills ──
+    %% Gaming & Skills
     CUE --> SNG["CueSitAndGo (Skill Gaming Tournaments)"]
     CUE --> TASK["CueTaskRegistry (Skill Tasks)"]
 
-    %% ── Referral & Incentives ──
+    %% Referral & Incentives
     CUE --> REF["CueReferral (Referral Rewards)"]
 
-    %% ── Escrow & Vesting ──
+    %% Escrow & Vesting
     CUE --> ESC["CueEscrow (Locked Payments)"]
     CUE --> VEST["CueVesting (Team / Investor Vesting)"]
 
-    %% ── Bridge & Airdrop ──
+    %% Bridge & Airdrop
     CUE --> BRIDGE["CueBridge (Cross-Chain Transfers)"]
     CUE --> AIRDROP["CueAirdrop (Token Distribution)"]
 
-    %% ── Flows / interactions
+    %% Flows / interactions
     LP --> BURN
     LP --> MARKET
     P2E --> SNG
@@ -45,63 +44,6 @@ graph LR
     REF --> SNG
     VEST --> DEV
     ESC --> DEV
-
-
- Tokenomics
-
-Name: CueCoin
-
-Symbol: CUECOIN
-
-Chain: BNB Smart Chain (BEP-20)
-
-Total Supply: 1,000,000,000 CUE (1B)
-
-Decimals: 18
-
-No mint function — fixed supply
-
-Deflationary mechanics with burn address 0xdead| Destination  | Tax % | Purpose                                 |
-| ------------ | ----- | --------------------------------------- |
-| Burn         | 1%    | Permanent deflation                     |
-| Auto-LP      | 1%    | Deepens liquidity pool                  |
-| P2E Pool     | 1%    | Play-to-earn rewards & NFT bonuses      |
-| Tournament   | 0.5%  | Self-funding prize pools                |
-| DAO Treasury | 0.25% | Governance treasury                     |
-| Dev Multisig | 0.25% | Operations: payroll, servers, marketing |
-Velocity Shield (Automatic +4% LP)
-
-Activates if TWAP drops > 15% in 1 hour AND LP depth ≥ 50 BNB
-
-Duration: 4 hours
-
-Tax rises from 4% → 8%
-
-Fully automatic, cannot be triggered manually
-
-Whale Guard (+2% burn)
-
-Contracts Overview
-| Contract               | Purpose                                |
-| ---------------------- | -------------------------------------- |
-| CueCoin.sol            | Core token with tax logic & governance |
-| CueNFT.sol             | NFT minting & rewards                  |
-| CueMarketplace.sol     | NFT trading marketplace                |
-| CueSitAndGo.sol        | Skill-based gaming tournaments         |
-| CueTaskRegistry.sol    | Skill task management for rewards      |
-| CueReferral.sol        | Referral rewards system                |
-| CueEscrow.sol          | Locked payments & escrow               |
-| CueVesting.sol         | Team/investor vesting                  |
-| CueBridge.sol          | Cross-chain token bridge               |
-| CueAirdrop.sol         | Token airdrop & distribution           |
-| CueRewardsPool.sol     | P2E reward pool                        |
-| CueTournament.sol      | Tournament prize pool                  |
-| CueDAO.sol             | Governance treasury                    |
-| CueLiquidityLocker.sol | LP token locking & timelocks           |
-
-Transactions > 0.1% of total supply (~1,000,000 CUE) pay extra 2% to burn
-
-Exempt: vesting, airdrops, ecosystem contracts
 
 Deployment Setup
 
