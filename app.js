@@ -60,8 +60,51 @@ const ui = {
   gamesVerified: byId("gamesVerified"),
   nextMilestone: byId("nextMilestone"),
   contractLink: byId("contractLink"),
-  toast: byId("toast")
+  toast: byId("toast"),
+  storyCarousel: byId("storyCarousel"),
+  previousSlide: byId("previousSlide"),
+  nextSlide: byId("nextSlide"),
+  slideDots: byId("slideDots")
 };
+
+const carousel = {
+  slides: [...ui.storyCarousel.querySelectorAll(".storySlide")],
+  dots: [...ui.slideDots.querySelectorAll("button")],
+  index: 0,
+  timer: null,
+  pointerStart: null
+};
+
+function showSlide(index) {
+  carousel.index = (index + carousel.slides.length) % carousel.slides.length;
+  carousel.slides.forEach((slide, slideIndex) => {
+    const active = slideIndex === carousel.index;
+    slide.classList.toggle("active", active);
+    slide.setAttribute("aria-hidden", String(!active));
+  });
+  carousel.dots.forEach((dot, dotIndex) => {
+    const active = dotIndex === carousel.index;
+    dot.classList.toggle("active", active);
+    if (active) dot.setAttribute("aria-current", "true");
+    else dot.removeAttribute("aria-current");
+  });
+}
+
+function pauseCarousel() {
+  window.clearInterval(carousel.timer);
+  carousel.timer = null;
+}
+
+function startCarousel() {
+  pauseCarousel();
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.hidden) return;
+  carousel.timer = window.setInterval(() => showSlide(carousel.index + 1), 6500);
+}
+
+function moveCarousel(direction) {
+  showSlide(carousel.index + direction);
+  startCarousel();
+}
 
 function configuredAddress(value) {
   return Boolean(value && ethers.isAddress(value) && value !== ethers.ZeroAddress);
@@ -340,6 +383,29 @@ async function loadTasks() {
   }));
 }
 
+ui.previousSlide.addEventListener("click", () => moveCarousel(-1));
+ui.nextSlide.addEventListener("click", () => moveCarousel(1));
+carousel.dots.forEach((dot, index) => dot.addEventListener("click", () => {
+  showSlide(index);
+  startCarousel();
+}));
+ui.storyCarousel.addEventListener("mouseenter", pauseCarousel);
+ui.storyCarousel.addEventListener("mouseleave", startCarousel);
+ui.storyCarousel.addEventListener("focusin", pauseCarousel);
+ui.storyCarousel.addEventListener("focusout", () => window.setTimeout(() => {
+  if (!ui.storyCarousel.contains(document.activeElement)) startCarousel();
+}, 0));
+ui.storyCarousel.addEventListener("pointerdown", (event) => {
+  carousel.pointerStart = event.clientX;
+});
+ui.storyCarousel.addEventListener("pointerup", (event) => {
+  if (carousel.pointerStart === null) return;
+  const distance = event.clientX - carousel.pointerStart;
+  carousel.pointerStart = null;
+  if (Math.abs(distance) > 45) moveCarousel(distance > 0 ? -1 : 1);
+});
+document.addEventListener("visibilitychange", startCarousel);
+
 ui.connectButton.addEventListener("click", connectWallet);
 ui.heroConnect.addEventListener("click", connectWallet);
 ui.standardTab.addEventListener("click", () => updateMode("standard"));
@@ -368,3 +434,4 @@ Promise.allSettled([loadPublicStatus(), loadTasks()]).then((results) => {
   if (failure) showToast(`Live data unavailable: ${readableError(failure.reason)}`, true);
 });
 updateClaimButton();
+startCarousel();

@@ -32,7 +32,8 @@ a { color: inherit; text-decoration: none; }
 .ambientTwo { width: 520px; height: 520px; top: 560px; left: -280px; background: radial-gradient(circle, rgba(8,123,241,.15), transparent 68%); }
 
 .topbar { height: 88px; display: flex; align-items: center; justify-content: space-between; gap: 28px; }
-.brand img, .footerBrand img { display: block; width: 176px; height: 48px; object-fit: cover; object-position: center; border-radius: 8px; }
+.brand, .footerBrand { display: inline-block; padding: 3px; border-radius: 10px; background: #031a42; box-shadow: 0 7px 22px rgba(3, 26, 66, .16); }
+.brand img, .footerBrand img { display: block; width: 176px; height: 48px; object-fit: cover; object-position: center; border-radius: 7px; }
 .topbar nav { display: flex; gap: 30px; font-size: 14px; font-weight: 700; color: var(--inkSoft); }
 .topbar nav a:hover { color: var(--blue); }
 .walletButton, .primaryAction, .claimButton {
@@ -94,6 +95,27 @@ a { color: inherit; text-decoration: none; }
 .stats .microLabel { color: #8294a8; }
 .stats strong { display: block; margin-top: 12px; font-size: 23px; }
 .stats p { margin: 7px 0 0; color: #9fabb9; font-size: 11px; line-height: 1.55; }
+
+.storySection { padding-block: 115px 35px; }
+.storyHeading { margin-bottom: 38px; }
+.storyCarousel { position: relative; height: min(620px, 62vw); min-height: 470px; overflow: hidden; border-radius: 30px; background: #06111e; box-shadow: 0 32px 90px rgba(7, 28, 52, .25); }
+.slides, .storySlide { position: absolute; inset: 0; }
+.storySlide { opacity: 0; visibility: hidden; transform: scale(1.035); transition: opacity .75s ease, transform 6.5s ease, visibility .75s; }
+.storySlide.active { opacity: 1; visibility: visible; transform: scale(1); z-index: 1; }
+.storySlide img { width: 100%; height: 100%; object-fit: cover; }
+.slideShade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(2,10,18,.9) 0%, rgba(2,10,18,.64) 38%, rgba(2,10,18,.08) 76%), linear-gradient(0deg, rgba(2,10,18,.56), transparent 48%); }
+.slideCopy { position: absolute; z-index: 2; left: clamp(34px, 6vw, 82px); bottom: clamp(48px, 8vw, 88px); width: min(520px, calc(100% - 100px)); color: white; }
+.slideCopy > span { color: #6fe9ff; font: 500 11px "DM Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
+.slideCopy h3 { margin: 16px 0 13px; font-size: clamp(34px, 4.2vw, 60px); line-height: 1.02; letter-spacing: -.055em; }
+.slideCopy p { max-width: 500px; margin: 0; color: #c6d2df; line-height: 1.65; }
+.slideArrow { position: absolute; z-index: 4; top: 50%; display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid rgba(255,255,255,.28); border-radius: 50%; color: white; background: rgba(4,16,29,.45); backdrop-filter: blur(9px); cursor: pointer; font-size: 30px; transform: translateY(-50%); transition: background .2s, transform .2s; }
+.slideArrow:hover { background: rgba(8,123,241,.88); transform: translateY(calc(-50% - 2px)); }
+.slideArrow.previous { left: 22px; }
+.slideArrow.next { right: 22px; }
+.slideDots { position: absolute; z-index: 4; right: 30px; bottom: 28px; display: flex; gap: 8px; }
+.slideDots button { width: 24px; height: 4px; padding: 0; border: 0; border-radius: 99px; background: rgba(255,255,255,.38); cursor: pointer; transition: width .25s, background .25s; }
+.slideDots button.active { width: 46px; background: var(--cyan); }
+.earningNote { max-width: 760px; margin: 18px auto 0; color: #7b8799; text-align: center; font-size: 11px; line-height: 1.65; }
 
 .section { padding-block: 115px; }
 .sectionHeading { display: flex; align-items: end; justify-content: space-between; gap: 50px; margin-bottom: 48px; }
@@ -172,6 +194,7 @@ footer { padding: 45px 0; color: #c2ccd7; background: #030a11; }
   .sectionHeading { align-items: flex-start; flex-direction: column; }
   .unlockSection, .safetyGrid, .gamePreview { gap: 50px; }
   .footerInner { grid-template-columns: 1fr; }
+  .storyCarousel { height: 570px; }
 }
 
 @media (max-width: 580px) {
@@ -192,6 +215,17 @@ footer { padding: 45px 0; color: #c2ccd7; background: #030a11; }
   .unlockDashboard { padding: 27px 22px; }
   .unlockMetrics { grid-template-columns: 1fr; }
   .footerBrand img { width: 155px; height: 44px; }
+  .storySection { padding-block: 80px 20px; }
+  .storyCarousel { height: 520px; min-height: 0; border-radius: 22px; }
+  .slideShade { background: linear-gradient(0deg, rgba(2,10,18,.92) 0%, rgba(2,10,18,.6) 52%, rgba(2,10,18,.08) 100%); }
+  .slideCopy { left: 24px; right: 24px; bottom: 68px; width: auto; }
+  .slideCopy h3 { font-size: 36px; }
+  .slideCopy p { font-size: 12px; }
+  .slideArrow { top: 22px; width: 40px; height: 40px; font-size: 25px; transform: none; }
+  .slideArrow:hover { transform: translateY(-2px); }
+  .slideArrow.previous { left: 20px; }
+  .slideArrow.next { right: 20px; }
+  .slideDots { right: 22px; bottom: 24px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

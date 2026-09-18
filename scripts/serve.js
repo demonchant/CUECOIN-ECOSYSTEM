@@ -10,13 +10,17 @@ const routes = new Map([
   ["/styles.css", "styles.css"],
   ["/app.js", "app.js"],
   ["/config.js", "config.js"],
-  ["/assets/logo.png", "assets/logo.png"]
+  ["/assets/logoDark.jpg", "assets/logoDark.jpg"],
+  ["/assets/slides/precision.jpg", "assets/slides/precision.jpg"],
+  ["/assets/slides/tournament.jpg", "assets/slides/tournament.jpg"],
+  ["/assets/slides/community.jpg", "assets/slides/community.jpg"],
+  ["/assets/slides/rewards.jpg", "assets/slides/rewards.jpg"]
 ]);
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
-  ".png": "image/png"
+  ".jpg": "image/jpeg"
 };
 
 createServer((request, response) => {
