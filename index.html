@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#07111d" />
+    <meta
+      name="description"
+      content="Official CueCoin airdrop portal for eligibility, tasks, wallet claims, and standard unlock progress."
+    />
+    <title>CueCoin Airdrop</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="ambient ambientOne"></div>
+    <div class="ambient ambientTwo"></div>
+
+    <header class="topbar shell">
+      <a class="brand" href="#top" aria-label="CueCoin home">
+        <img src="./assets/logo.png" alt="CueCoin" />
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#how">How it works</a>
+        <a href="#tasks">Tasks</a>
+        <a href="#safety">Safety</a>
+      </nav>
+      <button class="walletButton" id="connectButton" type="button">
+        <span class="walletDot"></span>
+        <span id="connectLabel">Connect wallet</span>
+      </button>
+    </header>
+
+    <main id="top">
+      <section class="hero shell">
+        <div class="heroCopy reveal">
+          <div class="eyebrow"><span></span> BNB Smart Chain</div>
+          <h1>Your place at the table starts here.</h1>
+          <p class="heroLead">
+            Join the CueCoin community before the first break. Check your eligibility,
+            complete active tasks, and claim CUE directly to your wallet.
+          </p>
+          <div class="heroActions">
+            <button class="primaryAction" id="heroConnect" type="button">Check eligibility</button>
+            <a class="secondaryAction" href="#how">Read the steps</a>
+          </div>
+          <div class="trustRow">
+            <span>No card details</span>
+            <span>Wallet controlled</span>
+            <span>Onchain verification</span>
+          </div>
+        </div>
+
+        <div class="claimCard reveal" id="claim">
+          <div class="cardTopline">
+            <div>
+              <span class="microLabel">Airdrop access</span>
+              <h2>Claim CUE</h2>
+            </div>
+            <span class="statusPill" id="claimStatus"><i></i> Not configured</span>
+          </div>
+
+          <div class="tabs" role="tablist" aria-label="Claim type">
+            <button class="tab active" id="standardTab" role="tab" aria-selected="true" type="button">
+              Standard
+            </button>
+            <button class="tab" id="premiumTab" role="tab" aria-selected="false" type="button">
+              Premium
+            </button>
+          </div>
+
+          <div class="awardPanel">
+            <div>
+              <span class="microLabel">Your allocation</span>
+              <strong id="awardAmount">50 to 80 CUE</strong>
+            </div>
+            <div class="feeBox">
+              <span class="microLabel">Claim fee</span>
+              <strong id="claimFee">Read from contract</strong>
+            </div>
+          </div>
+
+          <p class="claimDescription" id="claimDescription">
+            Standard CUE is secured in the airdrop contract and unlocks as you complete verified games.
+          </p>
+
+          <div class="walletState" id="walletState">
+            <span class="walletStateIcon">01</span>
+            <div>
+              <strong>Connect your wallet</strong>
+              <p>Use a BNB Smart Chain wallet to check live eligibility.</p>
+            </div>
+          </div>
+
+          <div class="proofPanel hidden" id="proofPanel">
+            <label for="proofInput">Eligibility proof</label>
+            <textarea
+              id="proofInput"
+              rows="4"
+              spellcheck="false"
+              placeholder='Paste the proof JSON supplied by CueCoin: {"proof":["0x..."]}'
+            ></textarea>
+            <p id="proofHelp">Your proof contains no private key and cannot control your wallet.</p>
+          </div>
+
+          <div class="termsRow">
+            <input id="termsCheckbox" type="checkbox" />
+            <span><label for="termsCheckbox">I have reviewed and accept the </label><a id="termsLink" href="#">current CueCoin terms</a>.</span>
+          </div>
+
+          <button class="claimButton" id="claimButton" type="button" disabled>
+            Connect wallet to continue
+          </button>
+          <p class="inlineNotice" id="inlineNotice" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="stats shell" aria-label="Airdrop statistics">
+        <article>
+          <span class="microLabel">Premium allocation</span>
+          <strong>250 CUE</strong>
+          <p>Delivered immediately after a valid premium claim.</p>
+        </article>
+        <article>
+          <span class="microLabel">Standard allocation</span>
+          <strong>50 to 80 CUE</strong>
+          <p>Base allocation plus verified task bonuses.</p>
+        </article>
+        <article>
+          <span class="microLabel">Unlock journey</span>
+          <strong>100 games</strong>
+          <p>Standard allocations unlock across ten milestones.</p>
+        </article>
+        <article>
+          <span class="microLabel">Cards required</span>
+          <strong>None</strong>
+          <p>Claims use your wallet and the contract fee in BNB.</p>
+        </article>
+      </section>
+
+      <section class="section shell" id="how">
+        <div class="sectionHeading">
+          <div>
+            <span class="eyebrow"><span></span> Claim guide</span>
+            <h2>From wallet to allocation.</h2>
+          </div>
+          <p>Every claim follows a visible, verifiable path. CueCoin will never ask for card details or a seed phrase.</p>
+        </div>
+
+        <div class="steps">
+          <article class="stepCard">
+            <span>01</span>
+            <h3>Prepare your wallet</h3>
+            <p>Install a compatible wallet, select BNB Smart Chain, and keep a small amount of BNB for the contract fee and network gas.</p>
+          </article>
+          <article class="stepCard">
+            <span>02</span>
+            <h3>Connect and qualify</h3>
+            <p>Connect the wallet you used for eligibility. Standard participants complete every active mandatory task and the required engagement tasks.</p>
+          </article>
+          <article class="stepCard">
+            <span>03</span>
+            <h3>Receive your proof</h3>
+            <p>After the official snapshot, the proof service returns a Merkle proof tied to your address and exact allocation.</p>
+          </article>
+          <article class="stepCard">
+            <span>04</span>
+            <h3>Accept the terms</h3>
+            <p>Review the published terms and record acceptance onchain. The site will show the transaction before requesting a claim.</p>
+          </article>
+          <article class="stepCard">
+            <span>05</span>
+            <h3>Claim in BNB</h3>
+            <p>Approve the live BNB fee shown by the contract. There is no bank card form, cash payment, or manual transfer.</p>
+          </article>
+          <article class="stepCard">
+            <span>06</span>
+            <h3>Play and unlock</h3>
+            <p>Premium CUE arrives immediately. Standard CUE unlocks in ten verified milestones as you complete one hundred games.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section taskSection" id="tasks">
+        <div class="shell">
+          <div class="sectionHeading">
+            <div>
+              <span class="eyebrow"><span></span> Eligibility tasks</span>
+              <h2>Earn your standard allocation.</h2>
+            </div>
+            <p id="taskIntro">Tasks will appear here directly from the active CueCoin task registry after launch configuration.</p>
+          </div>
+          <div class="taskGrid" id="taskGrid">
+            <article class="taskPlaceholder">
+              <span class="taskIndex">Ready</span>
+              <div>
+                <h3>Launch tasks are being reviewed</h3>
+                <p>The sample contract tasks are inactive. Official task links must be verified before the claim window opens.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section shell unlockSection">
+        <div class="unlockCopy">
+          <span class="eyebrow"><span></span> Standard claim</span>
+          <h2>Progress should reward play.</h2>
+          <p>
+            Standard allocations stay protected in the airdrop contract. Every ten verified games unlocks another part of the allocation until the full amount is available after one hundred games.
+          </p>
+          <div class="progressTrack" aria-label="Example unlock progress">
+            <span style="width: 40%"></span>
+          </div>
+          <div class="progressLabels"><span>0 games</span><strong>Every 10 games</strong><span>100 games</span></div>
+        </div>
+        <div class="unlockDashboard">
+          <span class="microLabel">Connected wallet progress</span>
+          <div class="unlockNumber" id="unlockPercent">0%</div>
+          <p id="unlockSummary">Connect a wallet to view standard allocation progress.</p>
+          <div class="unlockMetrics">
+            <div><span>Unlocked</span><strong id="unlockedAmount">0 CUE</strong></div>
+            <div><span>Games verified</span><strong id="gamesVerified">0</strong></div>
+            <div><span>Next milestone</span><strong id="nextMilestone">10 games</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section safetySection" id="safety">
+        <div class="shell safetyGrid">
+          <div>
+            <span class="eyebrow light"><span></span> Stay protected</span>
+            <h2>A real claim never needs your secret phrase.</h2>
+          </div>
+          <div class="safetyList">
+            <p><span>01</span> Verify the contract address shown on this page against the official CueCoin channels.</p>
+            <p><span>02</span> Never share a seed phrase, private key, recovery code, or screen control.</p>
+            <p><span>03</span> Never send BNB manually to a person. Use only the claim transaction generated here.</p>
+            <p><span>04</span> Read the wallet simulation and transaction details before signing.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section shell gamePreview">
+        <div class="previewVisual" aria-hidden="true">
+          <div class="tableRail"><div class="tableFelt"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+        </div>
+        <div class="previewCopy">
+          <span class="eyebrow"><span></span> What comes next</span>
+          <h2>Skill decides the frame.</h2>
+          <p>
+            CueCoin is being designed around competitive snooker: practice, fair matchmaking, direct challenges, tournaments, achievements, and transparent CUE settlement. The game itself is a future build and is not part of this airdrop portal.
+          </p>
+        </div>
+      </section>
+
+      <section class="section shell faqSection">
+        <div class="sectionHeading">
+          <div>
+            <span class="eyebrow"><span></span> Common questions</span>
+            <h2>Know before you claim.</h2>
+          </div>
+        </div>
+        <div class="faqList">
+          <details>
+            <summary>Do I pay with a debit card or bank transfer?</summary>
+            <p>No. The contract accepts its current claim fee in BNB and your wallet separately pays network gas. Do not make a manual payment to anyone.</p>
+          </details>
+          <details>
+            <summary>Why does the standard allocation stay locked?</summary>
+            <p>The standard path is designed to reward participation. It unlocks over ten milestones as verified gameplay reaches one hundred games.</p>
+          </details>
+          <details>
+            <summary>What is an eligibility proof?</summary>
+            <p>It is a Merkle proof generated from the official eligibility snapshot. It proves your wallet and allocation are included without exposing private wallet information.</p>
+          </details>
+          <details>
+            <summary>Can a claim ask for my private key?</summary>
+            <p>Never. A legitimate wallet connection only requests public account access and clear transaction signatures. Leave immediately if any page requests your secret phrase or private key.</p>
+          </details>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="shell footerInner">
+        <div class="footerBrand">
+          <img src="./assets/logo.png" alt="CueCoin" />
+          <p>Competitive play. Transparent settlement. Community ownership.</p>
+        </div>
+        <div>
+          <span class="microLabel">Official contract</span>
+          <a id="contractLink" href="#claim">Awaiting deployment configuration</a>
+        </div>
+        <p class="legal">Participation may be restricted by location. This page does not promise profit. Review all published terms before using the contract.</p>
+      </div>
+    </footer>
+
+    <div class="toast" id="toast" role="alert" aria-live="assertive"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.17.0/dist/ethers.umd.min.js"></script>
+    <script src="./config.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

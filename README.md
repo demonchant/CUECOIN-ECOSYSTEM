@@ -4,6 +4,8 @@ CueCoin is a fixed supply gaming economy for BNB Smart Chain. Its token symbol i
 
 This repository is source code, tests, and deployment tooling. It is not a promise of profit. Do not deploy it with public funds until an independent audit, a testnet launch, operational rehearsals, and legal review are complete.
 
+The repository root also contains the public airdrop portal. It explains both claim paths, reads live fees and status from `CueAirdrop`, displays active tasks from `CueTaskRegistry`, accepts Merkle proofs, records Terms of Service acceptance, submits claims, and shows standard unlock progress. Claims remain disabled while deployment addresses are blank in `config.js`.
+
 ## What the ecosystem does
 
 `CueCoin` creates one billion CUE once. It cannot mint more. Normal taxable transfers route value to six destinations: token burn, automatic liquidity, player rewards, tournament funding, DAO treasury, and development operations. System contracts can be excluded from this tax so internal payouts are not taxed twice.
@@ -59,6 +61,8 @@ npm install
 npm run compile
 npm test
 ```
+
+To preview the airdrop portal locally, run `npm run web` and open `http://127.0.0.1:4173`. Before publishing it, set the verified contract addresses, proof service URL, and legally reviewed terms URL in `config.js`.
 
 Dependencies are pinned in `package.json` and `package-lock.json`. The optimizer uses one run because `CueNFT` is close to the EVM deployment size ceiling. Do not change compiler settings without checking deployed bytecode size again.
 
