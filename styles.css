@@ -43,18 +43,21 @@ a { color: inherit; text-decoration: none; }
 .walletButton { padding: 13px 18px; display: flex; align-items: center; gap: 9px; }
 .walletDot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 5px rgba(53,232,163,.13); }
 
-.hero { min-height: 690px; display: grid; grid-template-columns: 1.08fr .92fr; align-items: center; gap: 74px; padding-block: 65px 95px; }
+.heroStage { position: relative; min-height: 780px; margin-bottom: 28px; overflow: hidden; border-radius: 32px; background: #06111e; box-shadow: 0 32px 90px rgba(7, 28, 52, .25); }
+.hero { position: relative; z-index: 2; min-height: 780px; display: grid; grid-template-columns: 1.08fr .92fr; align-items: center; gap: 74px; padding: 68px 72px 86px; color: white; pointer-events: none; }
+.heroCopy, .claimCard { pointer-events: auto; }
 .eyebrow { display: inline-flex; align-items: center; gap: 10px; color: var(--blue); font: 500 12px/1 "DM Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
 .eyebrow > span { width: 26px; height: 1px; background: currentColor; }
 .hero h1 { max-width: 680px; margin: 20px 0 22px; font-size: clamp(48px, 6.4vw, 84px); line-height: .98; letter-spacing: -.065em; }
-.heroLead { max-width: 600px; font-size: 18px; line-height: 1.7; color: var(--inkSoft); }
+.heroCopy { text-shadow: 0 2px 24px rgba(0,0,0,.45); }
+.heroLead { max-width: 600px; font-size: 18px; line-height: 1.7; color: #d8e3ed; }
 .heroActions { display: flex; align-items: center; gap: 14px; margin-top: 34px; }
 .primaryAction, .secondaryAction { padding: 16px 22px; }
-.secondaryAction { font-weight: 800; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.58); }
-.trustRow { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 34px; color: #64748b; font-size: 12px; font-weight: 700; }
+.secondaryAction { font-weight: 800; border: 1px solid rgba(255,255,255,.42); border-radius: 14px; background: rgba(3,18,32,.48); backdrop-filter: blur(12px); }
+.trustRow { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 34px; color: #d0dbe5; font-size: 12px; font-weight: 700; }
 .trustRow span::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 8px; border-radius: 50%; background: var(--green); }
 
-.claimCard { background: var(--surface); border: 1px solid rgba(255,255,255,.86); border-radius: 28px; padding: 28px; box-shadow: var(--shadow); backdrop-filter: blur(20px); }
+.claimCard { color: var(--ink); background: rgba(255,255,255,.95); border: 1px solid rgba(255,255,255,.96); border-radius: 28px; padding: 28px; box-shadow: var(--shadow); backdrop-filter: blur(20px); }
 .cardTopline, .awardPanel { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
 .cardTopline h2 { margin: 6px 0 0; font-size: 30px; letter-spacing: -.04em; }
 .microLabel { display: block; color: #778399; font: 500 10px/1.4 "DM Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
@@ -96,23 +99,17 @@ a { color: inherit; text-decoration: none; }
 .stats strong { display: block; margin-top: 12px; font-size: 23px; }
 .stats p { margin: 7px 0 0; color: #9fabb9; font-size: 11px; line-height: 1.55; }
 
-.storySection { padding-block: 115px 35px; }
-.storyHeading { margin-bottom: 38px; }
-.storyCarousel { position: relative; height: min(620px, 62vw); min-height: 470px; overflow: hidden; border-radius: 30px; background: #06111e; box-shadow: 0 32px 90px rgba(7, 28, 52, .25); }
+.storyCarousel { position: absolute; z-index: 0; inset: 0; overflow: hidden; background: #06111e; }
 .slides, .storySlide { position: absolute; inset: 0; }
 .storySlide { opacity: 0; visibility: hidden; transform: scale(1.035); transition: opacity .75s ease, transform 6.5s ease, visibility .75s; }
 .storySlide.active { opacity: 1; visibility: visible; transform: scale(1); z-index: 1; }
 .storySlide img { width: 100%; height: 100%; object-fit: cover; }
-.slideShade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(2,10,18,.9) 0%, rgba(2,10,18,.64) 38%, rgba(2,10,18,.08) 76%), linear-gradient(0deg, rgba(2,10,18,.56), transparent 48%); }
-.slideCopy { position: absolute; z-index: 2; left: clamp(34px, 6vw, 82px); bottom: clamp(48px, 8vw, 88px); width: min(520px, calc(100% - 100px)); color: white; }
-.slideCopy > span { color: #6fe9ff; font: 500 11px "DM Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
-.slideCopy h3 { margin: 16px 0 13px; font-size: clamp(34px, 4.2vw, 60px); line-height: 1.02; letter-spacing: -.055em; }
-.slideCopy p { max-width: 500px; margin: 0; color: #c6d2df; line-height: 1.65; }
-.slideArrow { position: absolute; z-index: 4; top: 50%; display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid rgba(255,255,255,.28); border-radius: 50%; color: white; background: rgba(4,16,29,.45); backdrop-filter: blur(9px); cursor: pointer; font-size: 30px; transform: translateY(-50%); transition: background .2s, transform .2s; }
-.slideArrow:hover { background: rgba(8,123,241,.88); transform: translateY(calc(-50% - 2px)); }
-.slideArrow.previous { left: 22px; }
-.slideArrow.next { right: 22px; }
-.slideDots { position: absolute; z-index: 4; right: 30px; bottom: 28px; display: flex; gap: 8px; }
+.slideShade { position: absolute; z-index: 2; inset: 0; background: linear-gradient(90deg, rgba(2,10,18,.91) 0%, rgba(2,10,18,.69) 42%, rgba(2,10,18,.35) 100%), linear-gradient(0deg, rgba(2,10,18,.72), transparent 55%); pointer-events: none; }
+.slideArrow { position: absolute; z-index: 4; bottom: 18px; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid rgba(255,255,255,.28); border-radius: 50%; color: white; background: rgba(4,16,29,.52); backdrop-filter: blur(9px); cursor: pointer; font-size: 28px; transition: background .2s, transform .2s; }
+.slideArrow:hover { background: rgba(8,123,241,.88); transform: translateY(-2px); }
+.slideArrow.previous { left: 28px; }
+.slideArrow.next { right: 28px; }
+.slideDots { position: absolute; z-index: 4; left: 50%; bottom: 28px; display: flex; gap: 8px; transform: translateX(-50%); }
 .slideDots button { width: 24px; height: 4px; padding: 0; border: 0; border-radius: 99px; background: rgba(255,255,255,.38); cursor: pointer; transition: width .25s, background .25s; }
 .slideDots button.active { width: 46px; background: var(--cyan); }
 .earningNote { max-width: 760px; margin: 18px auto 0; color: #7b8799; text-align: center; font-size: 11px; line-height: 1.65; }
@@ -156,13 +153,15 @@ a { color: inherit; text-decoration: none; }
 .safetyList p { display: grid; grid-template-columns: 34px 1fr; gap: 18px; padding: 0 0 23px; margin: 0 0 23px; border-bottom: 1px solid rgba(255,255,255,.12); color: #bac4d0; line-height: 1.65; }
 .safetyList span { color: var(--green); font: 500 11px "DM Mono", monospace; }
 
-.gamePreview { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
-.previewVisual { min-height: 390px; display: grid; place-items: center; border-radius: 28px; overflow: hidden; background: radial-gradient(circle at 50% 20%, #163753, #07111d 70%); }
-.tableRail { width: 73%; padding: 16px; transform: perspective(650px) rotateX(56deg) rotateZ(-9deg); border-radius: 28px; background: linear-gradient(145deg,#8b5a2b,#3a1d0c); box-shadow: 0 45px 50px rgba(0,0,0,.45); }
-.tableFelt { position: relative; aspect-ratio: 1.9; border: 8px solid #123d32; border-radius: 17px; background: radial-gradient(circle at 55% 40%, #0b8c6e, #075244); }
-.tableFelt i { position: absolute; width: 15px; height: 15px; border-radius: 50%; background: #04100f; }
-.tableFelt i:nth-child(1) { top: -7px; left: -7px; }.tableFelt i:nth-child(2) { top: -7px; right: -7px; }.tableFelt i:nth-child(3) { bottom: -7px; left: -7px; }.tableFelt i:nth-child(4) { bottom: -7px; right: -7px; }.tableFelt i:nth-child(5) { top: -7px; left: calc(50% - 7px); }.tableFelt i:nth-child(6) { bottom: -7px; left: calc(50% - 7px); }
-.previewCopy p { color: #64748b; line-height: 1.8; }
+.gamePreview { position: relative; min-height: 620px; display: flex; align-items: flex-end; margin-block: 115px; padding: 80px; overflow: hidden; border-radius: 30px; color: white; box-shadow: 0 32px 90px rgba(7,28,52,.24); }
+.gameBackdrop, .gameShade { position: absolute; inset: 0; width: 100%; height: 100%; }
+.gameBackdrop { object-fit: cover; }
+.gameShade { background: linear-gradient(90deg, rgba(2,10,18,.94) 0%, rgba(2,10,18,.77) 42%, rgba(2,10,18,.08) 82%), linear-gradient(0deg, rgba(2,10,18,.72), transparent 58%); }
+.previewCopy { position: relative; z-index: 1; max-width: 610px; }
+.previewCopy p { color: #d1dce7; line-height: 1.8; }
+.gameRoadmap { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 24px; }
+.gameRoadmap span { padding: 9px 12px; border: 1px solid rgba(111,233,255,.4); border-radius: 999px; color: #8deeff; background: rgba(4,25,43,.58); font: 500 10px "DM Mono", monospace; text-transform: uppercase; letter-spacing: .06em; backdrop-filter: blur(9px); }
+.previewCopy .earningNote { margin: 20px 0 0; color: #aab8c6; text-align: left; }
 
 .faqSection { padding-top: 35px; }
 .faqList { border-top: 1px solid var(--line); }
@@ -185,16 +184,17 @@ footer { padding: 45px 0; color: #c2ccd7; background: #030a11; }
 
 @media (max-width: 900px) {
   .topbar nav { display: none; }
-  .hero, .unlockSection, .gamePreview, .safetyGrid { grid-template-columns: 1fr; }
-  .hero { gap: 50px; padding-top: 55px; }
+  .hero, .unlockSection, .safetyGrid { grid-template-columns: 1fr; }
+  .heroStage { min-height: 0; }
+  .hero { min-height: 0; gap: 50px; padding: 60px 54px 90px; }
   .stats { grid-template-columns: 1fr 1fr; }
   .stats article:nth-child(2) { border-right: 0; }
   .stats article:nth-child(-n+2) { border-bottom: 1px solid rgba(255,255,255,.1); }
   .steps { grid-template-columns: 1fr 1fr; }
   .sectionHeading { align-items: flex-start; flex-direction: column; }
-  .unlockSection, .safetyGrid, .gamePreview { gap: 50px; }
+  .unlockSection, .safetyGrid { gap: 50px; }
+  .gamePreview { min-height: 680px; padding: 54px; }
   .footerInner { grid-template-columns: 1fr; }
-  .storyCarousel { height: 570px; }
 }
 
 @media (max-width: 580px) {
@@ -202,7 +202,8 @@ footer { padding: 45px 0; color: #c2ccd7; background: #030a11; }
   .topbar { height: 72px; }
   .brand img { width: 128px; height: 38px; }
   .walletButton { padding: 11px 13px; font-size: 11px; }
-  .hero { padding-block: 45px 70px; }
+  .heroStage { width: calc(100% - 16px); border-radius: 24px; }
+  .hero { padding: 48px 20px 82px; }
   .hero h1 { font-size: 49px; }
   .heroLead { font-size: 15px; }
   .heroActions { align-items: stretch; flex-direction: column; text-align: center; }
@@ -210,22 +211,20 @@ footer { padding: 45px 0; color: #c2ccd7; background: #030a11; }
   .stats, .steps, .taskGrid { grid-template-columns: 1fr; }
   .stats article { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.1); }
   .section { padding-block: 80px; }
+  .gamePreview { min-height: 720px; margin-block: 80px; padding: 36px 24px; }
+  .gameBackdrop { object-position: 68% center; }
+  .gameShade { background: linear-gradient(0deg, rgba(2,10,18,.96) 0%, rgba(2,10,18,.74) 55%, rgba(2,10,18,.12) 100%); }
   .stepCard { min-height: 210px; }
   .taskPlaceholder { grid-column: auto; }
   .unlockDashboard { padding: 27px 22px; }
   .unlockMetrics { grid-template-columns: 1fr; }
   .footerBrand img { width: 155px; height: 44px; }
-  .storySection { padding-block: 80px 20px; }
-  .storyCarousel { height: 520px; min-height: 0; border-radius: 22px; }
-  .slideShade { background: linear-gradient(0deg, rgba(2,10,18,.92) 0%, rgba(2,10,18,.6) 52%, rgba(2,10,18,.08) 100%); }
-  .slideCopy { left: 24px; right: 24px; bottom: 68px; width: auto; }
-  .slideCopy h3 { font-size: 36px; }
-  .slideCopy p { font-size: 12px; }
-  .slideArrow { top: 22px; width: 40px; height: 40px; font-size: 25px; transform: none; }
+  .slideShade { background: linear-gradient(0deg, rgba(2,10,18,.92) 0%, rgba(2,10,18,.62) 68%, rgba(2,10,18,.4) 100%); }
+  .slideArrow { bottom: 18px; width: 40px; height: 40px; font-size: 25px; }
   .slideArrow:hover { transform: translateY(-2px); }
   .slideArrow.previous { left: 20px; }
   .slideArrow.next { right: 20px; }
-  .slideDots { right: 22px; bottom: 24px; }
+  .slideDots { bottom: 24px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

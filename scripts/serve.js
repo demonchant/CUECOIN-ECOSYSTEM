@@ -13,7 +13,7 @@ const routes = new Map([
   ["/assets/logoDark.jpg", "assets/logoDark.jpg"],
   ["/assets/slides/precision.jpg", "assets/slides/precision.jpg"],
   ["/assets/slides/tournament.jpg", "assets/slides/tournament.jpg"],
-  ["/assets/slides/community.jpg", "assets/slides/community.jpg"],
+  ["/assets/slides/cuestrikeMobile.jpg", "assets/slides/cuestrikeMobile.jpg"],
   ["/assets/slides/rewards.jpg", "assets/slides/rewards.jpg"]
 ]);
 const contentTypes = {

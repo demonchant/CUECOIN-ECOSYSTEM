@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#07111d" />
     <meta
       name="description"
-      content="Official CueCoin airdrop portal for eligibility, tasks, wallet claims, and standard unlock progress."
+      content="Official CueCoin airdrop portal and home of CueStrike, the first game in the planned skill gaming ecosystem."
     />
-    <title>CueCoin Airdrop</title>
+    <title>CueCoin Airdrop and CueStrike</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -26,6 +26,7 @@
         <img src="./assets/logoDark.jpg" alt="CueCoin" />
       </a>
       <nav aria-label="Primary navigation">
+        <a href="#games">Games</a>
         <a href="#how">How it works</a>
         <a href="#tasks">Tasks</a>
         <a href="#safety">Safety</a>
@@ -37,13 +38,39 @@
     </header>
 
     <main id="top">
-      <section class="hero shell">
+      <section class="heroStage shell" aria-labelledby="heroTitle">
+        <div class="storyCarousel" id="storyCarousel" aria-roledescription="carousel" aria-label="The CueCoin and CueStrike vision">
+          <div class="slides" aria-live="off">
+            <article class="storySlide active" aria-hidden="false">
+              <img src="./assets/slides/cuestrikeMobile.jpg" alt="Adult players holding phones with CueStrike snooker gameplay visible on every screen" fetchpriority="high" />
+            </article>
+            <article class="storySlide" aria-hidden="true">
+              <img src="./assets/slides/precision.jpg" alt="A focused snooker player lining up a precise tournament shot" loading="lazy" />
+            </article>
+            <article class="storySlide" aria-hidden="true">
+              <img src="./assets/slides/tournament.jpg" alt="Two snooker competitors playing in a modern tournament arena" loading="lazy" />
+            </article>
+            <article class="storySlide" aria-hidden="true">
+              <img src="./assets/slides/rewards.jpg" alt="Snooker players shaking hands after a fair competitive match" loading="lazy" />
+            </article>
+          </div>
+          <div class="slideShade"></div>
+          <button class="slideArrow previous" id="previousSlide" type="button" aria-label="Show previous image">&lsaquo;</button>
+          <button class="slideArrow next" id="nextSlide" type="button" aria-label="Show next image">&rsaquo;</button>
+          <div class="slideDots" id="slideDots" role="group" aria-label="Choose a hero image">
+            <button class="active" type="button" aria-label="Show image 1" aria-current="true"></button>
+            <button type="button" aria-label="Show image 2"></button>
+            <button type="button" aria-label="Show image 3"></button>
+            <button type="button" aria-label="Show image 4"></button>
+          </div>
+        </div>
+
+        <div class="hero">
         <div class="heroCopy reveal">
-          <div class="eyebrow"><span></span> BNB Smart Chain</div>
-          <h1>Your place at the table starts here.</h1>
+          <div class="eyebrow light"><span></span> CueCoin presents CueStrike</div>
+          <h1 id="heroTitle">CueStrike is our first crown jewel.</h1>
           <p class="heroLead">
-            Join the CueCoin community before the first break. Check your eligibility,
-            complete active tasks, and claim CUE directly to your wallet.
+            Competitive snooker built around practice, precision, and fair play. Join the CueCoin community, check your airdrop eligibility, and help build the foundation for the skill gaming ecosystem.
           </p>
           <div class="heroActions">
             <button class="primaryAction" id="heroConnect" type="button">Check eligibility</button>
@@ -118,6 +145,7 @@
           </button>
           <p class="inlineNotice" id="inlineNotice" role="status" aria-live="polite"></p>
         </div>
+        </div>
       </section>
 
       <section class="stats shell" aria-label="Airdrop statistics">
@@ -141,67 +169,6 @@
           <strong>None</strong>
           <p>Claims use your wallet and the contract fee in BNB.</p>
         </article>
-      </section>
-
-      <section class="storySection shell" aria-labelledby="storyTitle">
-        <div class="sectionHeading storyHeading">
-          <div>
-            <span class="eyebrow"><span></span> The CueCoin vision</span>
-            <h2 id="storyTitle">A game where skill creates opportunity.</h2>
-          </div>
-          <p>CueCoin is designed to let players compete, improve, and earn from transparent prize pools. Winning is never guaranteed. Performance should decide the result.</p>
-        </div>
-
-        <div class="storyCarousel" id="storyCarousel" aria-roledescription="carousel" aria-label="CueCoin vision">
-          <div class="slides" aria-live="off">
-            <article class="storySlide active" aria-hidden="false">
-              <img src="./assets/slides/precision.jpg" alt="A focused snooker player lining up a precise tournament shot" fetchpriority="high" />
-              <div class="slideShade"></div>
-              <div class="slideCopy">
-                <span>01 / Skill decides</span>
-                <h3>Every frame begins with your ability.</h3>
-                <p>Practice, precision, and decision making should matter more than spending power.</p>
-              </div>
-            </article>
-            <article class="storySlide" aria-hidden="true">
-              <img src="./assets/slides/tournament.jpg" alt="Two snooker competitors playing in a modern tournament arena" loading="lazy" />
-              <div class="slideShade"></div>
-              <div class="slideCopy">
-                <span>02 / Real competition</span>
-                <h3>From direct challenges to major tournaments.</h3>
-                <p>Matched opponents, visible rules, protected entry pools, and verifiable settlement.</p>
-              </div>
-            </article>
-            <article class="storySlide" aria-hidden="true">
-              <img src="./assets/slides/community.jpg" alt="A global community of adults connected through mobile snooker play" loading="lazy" />
-              <div class="slideShade"></div>
-              <div class="slideCopy">
-                <span>03 / One global table</span>
-                <h3>Play beyond borders.</h3>
-                <p>A worldwide community where skill matched players can meet, compete, and build a reputation.</p>
-              </div>
-            </article>
-            <article class="storySlide" aria-hidden="true">
-              <img src="./assets/slides/rewards.jpg" alt="Snooker players shaking hands after a fair match with abstract digital rewards" loading="lazy" />
-              <div class="slideShade"></div>
-              <div class="slideCopy">
-                <span>04 / Earned rewards</span>
-                <h3>Turn performance into opportunity.</h3>
-                <p>CUE connects competition, player rewards, achievements, and transparent prize distribution.</p>
-              </div>
-            </article>
-          </div>
-
-          <button class="slideArrow previous" id="previousSlide" type="button" aria-label="Show previous image">‹</button>
-          <button class="slideArrow next" id="nextSlide" type="button" aria-label="Show next image">›</button>
-          <div class="slideDots" id="slideDots" role="group" aria-label="Choose an image">
-            <button class="active" type="button" aria-label="Show image 1" aria-current="true"></button>
-            <button type="button" aria-label="Show image 2"></button>
-            <button type="button" aria-label="Show image 3"></button>
-            <button type="button" aria-label="Show image 4"></button>
-          </div>
-        </div>
-        <p class="earningNote">CueCoin enables skill based competition and rewards. It does not promise income or profit, and participation may be restricted by location.</p>
       </section>
 
       <section class="section shell" id="how">
@@ -307,16 +274,22 @@
         </div>
       </section>
 
-      <section class="section shell gamePreview">
-        <div class="previewVisual" aria-hidden="true">
-          <div class="tableRail"><div class="tableFelt"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
-        </div>
+      <section class="section shell gamePreview" id="games">
+        <img class="gameBackdrop" src="./assets/slides/cuestrikeMobile.jpg" alt="CueStrike players holding phones with the snooker game displayed on the front screens" loading="lazy" />
+        <div class="gameShade"></div>
         <div class="previewCopy">
-          <span class="eyebrow"><span></span> What comes next</span>
-          <h2>Skill decides the frame.</h2>
+          <span class="eyebrow"><span></span> The first crown jewel</span>
+          <h2>CueStrike opens the ecosystem.</h2>
           <p>
-            CueCoin is being designed around competitive snooker: practice, fair matchmaking, direct challenges, tournaments, achievements, and transparent CUE settlement. The game itself is a future build and is not part of this airdrop portal.
+            CueStrike is the first game planned for CueCoin: competitive mobile snooker with practice, fair matchmaking, direct challenges, tournaments, achievements, and transparent CUE settlement. Chess, draughts, and more skill based games can follow on the same ecosystem after CueStrike establishes the foundation. The game itself is a future build and is not part of this airdrop portal.
           </p>
+          <div class="gameRoadmap" aria-label="Planned skill games">
+            <span>CueStrike first</span>
+            <span>Chess next</span>
+            <span>Draughts next</span>
+            <span>More to follow</span>
+          </div>
+          <p class="earningNote">Skill based competition can create opportunities, but CueCoin does not promise income or profit. Participation may be restricted by location.</p>
         </div>
       </section>
 

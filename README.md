@@ -2,6 +2,8 @@
 
 CueCoin is a fixed supply gaming economy for BNB Smart Chain. Its token symbol is `CUE`. The system combines taxed token transfers, player wagers, tournaments, rewards, achievements, referrals, governance, vesting, liquidity locks, an airdrop, and LayerZero based bridging.
 
+`CueStrike` is the planned first crown jewel of the ecosystem: a competitive mobile snooker game built around practice, fair matchmaking, direct challenges, tournaments, achievements, and transparent CUE settlement. Chess, draughts, and additional skill based games are intended to follow after CueStrike establishes the shared player and settlement foundation. The games are future products and are not included in this smart contract repository today.
+
 This repository is source code, tests, and deployment tooling. It is not a promise of profit. Do not deploy it with public funds until an independent audit, a testnet launch, operational rehearsals, and legal review are complete.
 
 The repository root also contains the public airdrop portal. It explains both claim paths, reads live fees and status from `CueAirdrop`, displays active tasks from `CueTaskRegistry`, accepts Merkle proofs, records Terms of Service acceptance, submits claims, and shows standard unlock progress. Claims remain disabled while deployment addresses are blank in `config.js`.
