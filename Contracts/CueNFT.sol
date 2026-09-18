@@ -93,9 +93,6 @@ pragma solidity ^0.8.20;
 // ╚══════════════════════════════════════════════════════════════╝
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
@@ -147,9 +144,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
  */
 contract CueNFT is
     ERC721,
-    ERC721Enumerable,
-    ERC721Royalty,
-    ERC721URIStorage,
     Ownable2Step,
     ReentrancyGuard,
     Pausable
@@ -284,15 +278,6 @@ contract CueNFT is
         bool    soulbound;
     }
 
-    struct HallOfFameEntry {
-        address wallet;
-        uint256 tokenId;
-        string  tournamentName;
-        bytes32 matchHistoryRoot;
-        uint256 timestamp;
-        uint256 blockNumber;
-    }
-
     struct SaleRecord {
         uint256 priceWei;
         uint256 timestamp;
@@ -325,16 +310,15 @@ contract CueNFT is
     mapping(uint8 => bool) public tierMintPaused;
 
     // ── ERC-2981 royalty receiver ──
-    address public marketplaceRoyaltyReceiver;
 
     // ── Hall of Fame ──
-    HallOfFameEntry[] public hallOfFame;
-    mapping(address => uint256[]) private _walletHoFIndices;
 
     // ── [V2-3 / V3-8] Per-wallet holding counts ──
     mapping(address => uint256) public rareHolderCount;
     mapping(address => uint256) public epicHolderCount;
     mapping(address => uint256) public legendaryHolderCount;
+    mapping(address => uint256) public commonHolderCount;
+    mapping(address => uint256) public genesisHolderCount;
 
     // ── [V3-7] Tournament name uniqueness ──
     mapping(bytes32 => bool) public usedTournamentNames;
@@ -392,7 +376,6 @@ contract CueNFT is
     event SaleRecorderUpdated(address indexed oldRecorder, address indexed newRecorder);
 
     event TierMinterUpdated(uint8 indexed tier, address indexed minter);
-    event MarketplaceReceiverUpdated(address indexed oldReceiver, address indexed newReceiver);
     event BaseURIUpdated(string newBaseURI);
 
     event GenesisMintingOpened(uint256 timestamp);
@@ -481,7 +464,7 @@ contract CueNFT is
      * @param _legendaryMinter       Tier 3 — CueTournament (world).
      * @param _genesisMinter         Tier 4 — CueAirdrop.
      * @param _badgeMinter           Badge tiers 5/6/7 — CueReferral.
-     * @param _baseURI               IPFS/HTTPS base URI.
+     * @param initialBaseURI         IPFS or HTTPS base URI.
      */
     constructor(
         address _cueCoin,
@@ -492,7 +475,7 @@ contract CueNFT is
         address _legendaryMinter,
         address _genesisMinter,
         address _badgeMinter,
-        string memory _baseURI
+        string memory initialBaseURI
     )
         ERC721("CueCoin NFT", "CUENFT")
         Ownable(msg.sender)
@@ -507,9 +490,8 @@ contract CueNFT is
         require(_badgeMinter         != address(0), "CueNFT: zero badgeMinter");
 
         cueCoin                    = IERC20(_cueCoin);
-        marketplaceRoyaltyReceiver = _marketplaceReceiver;
         saleRecorder               = _saleRecorder;
-        _baseTokenURI              = _baseURI;
+        _baseTokenURI              = initialBaseURI;
         _nextTokenId               = 1;
 
         // Initialise active Common cap at the hard bytecode ceiling
@@ -523,7 +505,6 @@ contract CueNFT is
         tierMinter[BADGE_GOLD]     = _badgeMinter;
         tierMinter[BADGE_DIAMOND]  = _badgeMinter;
 
-        _setDefaultRoyalty(_marketplaceReceiver, ROYALTY_BPS);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -551,6 +532,7 @@ contract CueNFT is
         cueCoin.safeTransferFrom(msg.sender, BURN_ADDRESS, COMMON_MINT_COST);
 
         tokenId = _mintToken(msg.sender, TIER_COMMON, 0, "", bytes32(0), false);
+        commonHolderCount[msg.sender]++;
         emit CommonMinted(tokenId, msg.sender, COMMON_MINT_COST);
     }
 
@@ -629,7 +611,7 @@ contract CueNFT is
         // [V3-7] Tournament name uniqueness — one Epic NFT per tournament event
         bytes32 nameKey = keccak256(bytes(tournamentName));
         require(!usedTournamentNames[nameKey],
-            "CueNFT: tournament name already used — one prize per event");
+            "CueNFT: tournament name already used, one prize per event");
         usedTournamentNames[nameKey] = true;
 
         // [V3-8] Per-wallet cap
@@ -677,7 +659,7 @@ contract CueNFT is
         // [V3-7] Tournament name uniqueness — one Legendary per World Tournament
         bytes32 nameKey = keccak256(bytes(tournamentName));
         require(!usedTournamentNames[nameKey],
-            "CueNFT: tournament name already used — one prize per event");
+            "CueNFT: tournament name already used, one prize per event");
         usedTournamentNames[nameKey] = true;
 
         // [V3-8] Per-wallet cap — one Legendary per wallet (also enforced by soulbound)
@@ -687,7 +669,7 @@ contract CueNFT is
         tokenId = _mintToken(to, TIER_LEGENDARY, 0, tournamentName, matchHistoryRoot, true);
         legendaryHolderCount[to]++;
 
-        _addToHallOfFame(to, tokenId, tournamentName, matchHistoryRoot);
+        emit HallOfFameAdded(tokenId, to, tokenId, tournamentName);
         emit AchievementMinted(tokenId, to, TIER_LEGENDARY, tournamentName, 0, matchHistoryRoot);
     }
 
@@ -716,7 +698,8 @@ contract CueNFT is
 
         uint256 genesisNumber = ++genesisCount;
 
-        tokenId = _mintToken(to, TIER_GENESIS, 0, "Genesis — Founders Collection", bytes32(0), true);
+        tokenId = _mintToken(to, TIER_GENESIS, 0, "Genesis Founders Collection", bytes32(0), true);
+        genesisHolderCount[to]++;
         nftMetadata[tokenId].isGenesis = true;
 
         emit GenesisMinted(tokenId, to, genesisNumber);
@@ -785,9 +768,21 @@ contract CueNFT is
         uint8 tier = nftMetadata[tokenId].tier;
 
         // Decrement per-wallet counts so oracle/minter can re-award
-        if (tier == TIER_RARE      && rareHolderCount[owner]      > 0) unchecked { rareHolderCount[owner]--;      }
-        if (tier == TIER_EPIC      && epicHolderCount[owner]      > 0) unchecked { epicHolderCount[owner]--;      }
-        if (tier == TIER_LEGENDARY && legendaryHolderCount[owner] > 0) unchecked { legendaryHolderCount[owner]--; }
+        if (tier == TIER_RARE && rareHolderCount[owner] > 0) {
+            unchecked { rareHolderCount[owner]--; }
+        }
+        if (tier == TIER_EPIC && epicHolderCount[owner] > 0) {
+            unchecked { epicHolderCount[owner]--; }
+        }
+        if (tier == TIER_LEGENDARY && legendaryHolderCount[owner] > 0) {
+            unchecked { legendaryHolderCount[owner]--; }
+        }
+        if (tier == TIER_COMMON && commonHolderCount[owner] > 0) {
+            unchecked { commonHolderCount[owner]--; }
+        }
+        if (tier == TIER_GENESIS && genesisHolderCount[owner] > 0) {
+            unchecked { genesisHolderCount[owner]--; }
+        }
 
         burnedPerTier[tier]++;
         _burn(tokenId);
@@ -879,25 +874,6 @@ contract CueNFT is
     //  INTERNAL — HALL OF FAME
     // ═══════════════════════════════════════════════════════════
 
-    function _addToHallOfFame(
-        address wallet,
-        uint256 tokenId,
-        string memory tournamentName,
-        bytes32 matchHistoryRoot
-    ) internal {
-        uint256 index = hallOfFame.length;
-        hallOfFame.push(HallOfFameEntry({
-            wallet:           wallet,
-            tokenId:          tokenId,
-            tournamentName:   tournamentName,
-            matchHistoryRoot: matchHistoryRoot,
-            timestamp:        block.timestamp,
-            blockNumber:      block.number
-        }));
-        _walletHoFIndices[wallet].push(index);
-        emit HallOfFameAdded(index, wallet, tokenId, tournamentName);
-    }
-
     // ═══════════════════════════════════════════════════════════
     //  INTERNAL — SOULBOUND + HOLDER COUNT TRACKING (_update)
     // ═══════════════════════════════════════════════════════════
@@ -915,7 +891,7 @@ contract CueNFT is
         address auth
     )
         internal
-        override(ERC721, ERC721Enumerable)
+        override(ERC721)
         returns (address)
     {
         address from    = _ownerOf(tokenId);
@@ -925,16 +901,33 @@ contract CueNFT is
             // Soulbound check
             if (nftMetadata[tokenId].soulbound) {
                 emit SoulboundTransferBlocked(tokenId, from, to);
-                revert("CueNFT: soulbound — token cannot be transferred");
+                revert("CueNFT: soulbound token cannot be transferred");
             }
 
             // Track secondary market holder counts
             uint8 tier = nftMetadata[tokenId].tier;
-            if (tier == TIER_RARE) {
-                if (rareHolderCount[from] > 0) unchecked { rareHolderCount[from]--; }
+            if (tier == TIER_COMMON) {
+                if (commonHolderCount[from] > 0) {
+                    unchecked { commonHolderCount[from]--; }
+                }
+                commonHolderCount[to]++;
+            } else if (tier == TIER_RARE) {
+                require(
+                    rareHolderCount[to] < MAX_RARE_PER_WALLET,
+                    "CueNFT: recipient rare cap reached"
+                );
+                if (rareHolderCount[from] > 0) {
+                    unchecked { rareHolderCount[from]--; }
+                }
                 rareHolderCount[to]++;
             } else if (tier == TIER_EPIC) {
-                if (epicHolderCount[from] > 0) unchecked { epicHolderCount[from]--; }
+                require(
+                    epicHolderCount[to] < MAX_EPIC_PER_WALLET,
+                    "CueNFT: recipient epic cap reached"
+                );
+                if (epicHolderCount[from] > 0) {
+                    unchecked { epicHolderCount[from]--; }
+                }
                 epicHolderCount[to]++;
             }
             // Legendary is soulbound — secondary transfer never reaches here
@@ -950,12 +943,10 @@ contract CueNFT is
     function tokenURI(uint256 tokenId)
         public
         view
-        override(ERC721, ERC721URIStorage)
+        override(ERC721)
         returns (string memory)
     {
         _requireOwned(tokenId);
-        string memory perToken = ERC721URIStorage.tokenURI(tokenId);
-        if (bytes(perToken).length > 0) return perToken;
         string memory base = _baseURI();
         if (bytes(base).length == 0) return "";
         return string(abi.encodePacked(base, tokenId.toString(), ".json"));
@@ -963,6 +954,11 @@ contract CueNFT is
 
     function _baseURI() internal view override returns (string memory) {
         return _baseTokenURI;
+    }
+
+    function tokenTier(uint256 tokenId) external view returns (uint8) {
+        _requireOwned(tokenId);
+        return nftMetadata[tokenId].tier;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -979,50 +975,29 @@ contract CueNFT is
         view
         returns (uint8 highestTier)
     {
-        uint256 balance = balanceOf(wallet);
-        if (balance == 0) return NO_NFT_SENTINEL;
-
-        bool found = false;
-        highestTier = 0;
-
-        for (uint256 i = 0; i < balance; ) {
-            uint8 t = nftMetadata[tokenOfOwnerByIndex(wallet, i)].tier;
-            if (t <= TIER_GENESIS) {
-                if (!found || t > highestTier) {
-                    highestTier = t;
-                    found       = true;
-                }
-            }
-            unchecked { ++i; }
-        }
-
-        if (!found) return NO_NFT_SENTINEL;
+        if (genesisHolderCount[wallet] > 0) return TIER_GENESIS;
+        if (legendaryHolderCount[wallet] > 0) return TIER_LEGENDARY;
+        if (epicHolderCount[wallet] > 0) return TIER_EPIC;
+        if (rareHolderCount[wallet] > 0) return TIER_RARE;
+        if (commonHolderCount[wallet] > 0) return TIER_COMMON;
+        return NO_NFT_SENTINEL;
     }
 
     /// @notice Fast boolean: does this wallet hold any bonus-granting NFT (Rare+)?
     function walletHasBonus(address wallet) external view returns (bool) {
-        uint256 balance = balanceOf(wallet);
-        for (uint256 i = 0; i < balance; ) {
-            if (isBonusTier(nftMetadata[tokenOfOwnerByIndex(wallet, i)].tier)) return true;
-            unchecked { ++i; }
-        }
-        return false;
+        return genesisHolderCount[wallet] > 0
+            || legendaryHolderCount[wallet] > 0
+            || epicHolderCount[wallet] > 0
+            || rareHolderCount[wallet] > 0;
     }
 
     /// @notice Wager bonus in bps for highest gameplay tier held (0 if none).
     function walletBonusBps(address wallet) external view returns (uint256) {
-        uint256 balance = balanceOf(wallet);
-        if (balance == 0) return 0;
-        uint8 highest = 0;
-        bool  found   = false;
-        for (uint256 i = 0; i < balance; ) {
-            uint8 t = nftMetadata[tokenOfOwnerByIndex(wallet, i)].tier;
-            if (t <= TIER_GENESIS && (!found || t > highest)) {
-                highest = t; found = true;
-            }
-            unchecked { ++i; }
-        }
-        return found ? tierBonusBps(highest) : 0;
+        if (genesisHolderCount[wallet] > 0) return tierBonusBps(TIER_GENESIS);
+        if (legendaryHolderCount[wallet] > 0) return tierBonusBps(TIER_LEGENDARY);
+        if (epicHolderCount[wallet] > 0) return tierBonusBps(TIER_EPIC);
+        if (rareHolderCount[wallet] > 0) return tierBonusBps(TIER_RARE);
+        return 0;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -1101,32 +1076,6 @@ contract CueNFT is
     //  VIEW — ENUMERATION & METADATA
     // ═══════════════════════════════════════════════════════════
 
-    function tokensOfOwner(address wallet)
-        external view returns (uint256[] memory tokenIds)
-    {
-        uint256 balance = balanceOf(wallet);
-        tokenIds = new uint256[](balance);
-        for (uint256 i = 0; i < balance; ) {
-            tokenIds[i] = tokenOfOwnerByIndex(wallet, i);
-            unchecked { ++i; }
-        }
-    }
-
-    function tokensOfOwnerByTier(address wallet, uint8 tier)
-        external view returns (uint256[] memory tokenIds)
-    {
-        uint256 balance = balanceOf(wallet);
-        uint256[] memory temp = new uint256[](balance);
-        uint256 count = 0;
-        for (uint256 i = 0; i < balance; ) {
-            uint256 tid = tokenOfOwnerByIndex(wallet, i);
-            if (nftMetadata[tid].tier == tier) temp[count++] = tid;
-            unchecked { ++i; }
-        }
-        tokenIds = new uint256[](count);
-        for (uint256 i = 0; i < count; ) { tokenIds[i] = temp[i]; unchecked { ++i; } }
-    }
-
     function getMetadata(uint256 tokenId) external view returns (NFTMetadata memory) {
         _requireOwned(tokenId);
         return nftMetadata[tokenId];
@@ -1151,22 +1100,10 @@ contract CueNFT is
         toBurn   = total - toMinter;
     }
 
-    function totalMinted() external view returns (uint256) { return _nextTokenId - 1; }
-
-    function totalSupply() public view override(ERC721Enumerable) returns (uint256) {
-        return super.totalSupply();
-    }
-
-    function hallOfFameLength() external view returns (uint256) { return hallOfFame.length; }
-
-    function walletHallOfFame(address wallet)
-        external view returns (HallOfFameEntry[] memory entries)
-    {
-        uint256[] storage indices = _walletHoFIndices[wallet];
-        entries = new HallOfFameEntry[](indices.length);
-        for (uint256 i = 0; i < indices.length; ) {
-            entries[i] = hallOfFame[indices[i]];
-            unchecked { ++i; }
+    function totalSupply() public view returns (uint256 live) {
+        for (uint8 tier = 0; tier <= BADGE_DIAMOND; ) {
+            live += mintedPerTier[tier] - burnedPerTier[tier];
+            unchecked { ++tier; }
         }
     }
 
@@ -1254,13 +1191,6 @@ contract CueNFT is
         emit TierMintUnpaused(tier);
     }
 
-    function setMarketplaceReceiver(address receiver) external onlyOwner {
-        require(receiver != address(0), "CueNFT: zero receiver");
-        emit MarketplaceReceiverUpdated(marketplaceRoyaltyReceiver, receiver);
-        marketplaceRoyaltyReceiver = receiver;
-        _setDefaultRoyalty(receiver, ROYALTY_BPS);
-    }
-
     function setSaleRecorder(address recorder) external onlyOwner {
         require(recorder != address(0), "CueNFT: zero recorder");
         emit SaleRecorderUpdated(saleRecorder, recorder);
@@ -1270,11 +1200,6 @@ contract CueNFT is
     function setBaseURI(string calldata newBaseURI) external onlyOwner {
         _baseTokenURI = newBaseURI;
         emit BaseURIUpdated(newBaseURI);
-    }
-
-    function setTokenURI(uint256 tokenId, string calldata uri) external onlyOwner {
-        _requireOwned(tokenId);
-        _setTokenURI(tokenId, uri);
     }
 
     function cancelTimelock(bytes32 operationId) external onlyOwner {
@@ -1315,18 +1240,4 @@ contract CueNFT is
     //  REQUIRED OVERRIDES
     // ═══════════════════════════════════════════════════════════
 
-    function _increaseBalance(address account, uint128 value)
-        internal override(ERC721, ERC721Enumerable)
-    {
-        super._increaseBalance(account, value);
-    }
-
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(ERC721, ERC721Enumerable, ERC721Royalty, ERC721URIStorage)
-        returns (bool)
-    {
-        return super.supportsInterface(interfaceId);
-    }
 }

@@ -175,6 +175,11 @@ contract CueAirdrop is Ownable2Step, ReentrancyGuard, Pausable, EIP712 {
     // ── Caps ──
     uint256 public constant PREMIUM_CAP   = 400_000;
     uint256 public constant STANDARD_CAP  = 5_000_000;
+    uint256 public constant MAX_AIRDROP_LIABILITY = 500_000_000 ether;
+
+    function requiredFundingAtMaximumClaims() external pure returns (uint256) {
+        return MAX_AIRDROP_LIABILITY;
+    }
 
     // ── Play-to-unlock schedule ──
     uint256 public constant GAMES_PER_MILESTONE   = 10;   // unlock every 10 games
@@ -1007,7 +1012,8 @@ contract CueAirdrop is Ownable2Step, ReentrancyGuard, Pausable, EIP712 {
     function setMerkleRoots(
         bytes32 _premiumRoot,
         bytes32 _standardRoot
-    ) external onlyOwner {
+    ) external onlyOwner timelocked(keccak256("setMerkleRoots")) {
+        require(!claimOpen, "CueAirdrop: close claims first");
         require(_premiumRoot  != bytes32(0), "CueAirdrop: zero premium root");
         require(_standardRoot != bytes32(0), "CueAirdrop: zero standard root");
         premiumMerkleRoot  = _premiumRoot;

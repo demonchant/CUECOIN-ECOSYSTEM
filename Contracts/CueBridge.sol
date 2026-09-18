@@ -330,6 +330,7 @@ contract CueBridge is Ownable2Step, ReentrancyGuard, ILayerZeroReceiver {
 
     // ── DAO treasury update timelock ──
     uint256 public constant TREASURY_UPDATE_DELAY = 48 hours;
+    uint256 public constant PEER_UPDATE_DELAY = 48 hours;
 
     // ═══════════════════════════════════════════════════════════
     //  IMMUTABLES
@@ -365,6 +366,8 @@ contract CueBridge is Ownable2Step, ReentrancyGuard, ILayerZeroReceiver {
     ///         bytes32 = address padded to 32 bytes.
     ///         MUST be set before enabling a destination.
     mapping(uint32 eid => bytes32 peer) public peers;
+    mapping(uint32 eid => bytes32 peer) public pendingPeers;
+    mapping(uint32 eid => uint256 eta) public pendingPeerEta;
 
     /// @notice Whether a destination endpoint is open for bridging.
     ///         Disabled by default — enabled per phase as chains are added.
@@ -379,6 +382,7 @@ contract CueBridge is Ownable2Step, ReentrancyGuard, ILayerZeroReceiver {
     uint256 public totalBridgedIn;      // all-time inbound CUECOIN (tokens released)
     uint256 public totalFeeBurned;      // all-time bridge fee burned
     uint256 public totalFeeToDao;       // all-time bridge fee to DAO
+    mapping(bytes32 guid => bool processed) public processedGuids;
 
     // ═══════════════════════════════════════════════════════════
     //  EVENTS
@@ -421,6 +425,7 @@ contract CueBridge is Ownable2Step, ReentrancyGuard, ILayerZeroReceiver {
     event BridgeFeeDistributed(uint256 burned, uint256 toDao);
 
     event PeerSet(uint32 indexed eid, bytes32 peer);
+    event PeerQueued(uint32 indexed eid, bytes32 peer, uint256 eta);
     event DestinationEnabled(uint32 indexed eid);
     event DestinationDisabled(uint32 indexed eid);
 
@@ -669,6 +674,8 @@ contract CueBridge is Ownable2Step, ReentrancyGuard, ILayerZeroReceiver {
         nonReentrant
     {
         // Validate the message comes from a trusted peer
+        require(!paused, "CueBridge: paused");
+        require(!processedGuids[_guid], "CueBridge: message already processed");
         require(
             _isPeer(_origin.srcEid, _origin.sender),
             "CueBridge: message from unknown peer"
@@ -680,7 +687,7 @@ contract CueBridge is Ownable2Step, ReentrancyGuard, ILayerZeroReceiver {
         bytes32 toBytes32;
         uint64  amountSD;
 
-        assembly {
+        assembly ("memory-safe") {
             // Skip 4-byte calldata offset for bytes memory — load from correct position.
             // _message is calldata, so we read directly.
             toBytes32 := calldataload(_message.offset)
@@ -701,6 +708,7 @@ contract CueBridge is Ownable2Step, ReentrancyGuard, ILayerZeroReceiver {
         );
 
         // Release tokens to recipient
+        processedGuids[_guid] = true;
         totalBridgedIn += amountLD;
         IERC20(address(cueCoin)).safeTransfer(recipient, amountLD);
 
@@ -830,6 +838,18 @@ contract CueBridge is Ownable2Step, ReentrancyGuard, ILayerZeroReceiver {
     function setPeer(uint32 eid, bytes32 peer) external onlyOwner {
         require(eid  != 0,           "CueBridge: zero eid");
         require(peer != bytes32(0),  "CueBridge: zero peer");
+        pendingPeers[eid] = peer;
+        pendingPeerEta[eid] = block.timestamp + PEER_UPDATE_DELAY;
+        emit PeerQueued(eid, peer, pendingPeerEta[eid]);
+    }
+
+    function applyPeer(uint32 eid) external {
+        uint256 eta = pendingPeerEta[eid];
+        require(eta != 0, "CueBridge: no pending peer");
+        require(block.timestamp >= eta, "CueBridge: peer delay active");
+        bytes32 peer = pendingPeers[eid];
+        delete pendingPeers[eid];
+        delete pendingPeerEta[eid];
         peers[eid] = peer;
         emit PeerSet(eid, peer);
     }
@@ -967,6 +987,20 @@ contract CueBridge is Ownable2Step, ReentrancyGuard, ILayerZeroReceiver {
      */
     function setMinBridgeAmount(uint256 amount) external onlyOwner {
         require(amount > 0, "CueBridge: zero minimum");
+        require(amount <= MAX_DAILY_BRIDGE_AMOUNT,
+            "CueBridge: minimum exceeds daily limit");
+        uint256 old = minBridgeAmount;
+        minBridgeAmount = amount;
+        emit MinBridgeAmountUpdated(old, amount);
+    }
+
+    function setParams(bytes calldata params) external onlyOwner {
+        require(msg.sender.code.length > 0,
+            "CueBridge: governance owner must be a contract");
+        uint256 amount = abi.decode(params, (uint256));
+        require(amount > 0, "CueBridge: zero minimum");
+        require(amount <= MAX_DAILY_BRIDGE_AMOUNT,
+            "CueBridge: minimum exceeds daily limit");
         uint256 old = minBridgeAmount;
         minBridgeAmount = amount;
         emit MinBridgeAmountUpdated(old, amount);
@@ -981,7 +1015,7 @@ contract CueBridge is Ownable2Step, ReentrancyGuard, ILayerZeroReceiver {
     function recoverERC20(address token, uint256 amount) external onlyOwner {
         require(
             token != address(cueCoin),
-            "CueBridge: cannot recover CUECOIN — it is the bridge reserve"
+            "CueBridge: cannot recover CUECOIN because it is the bridge reserve"
         );
         IERC20(token).safeTransfer(owner(), amount);
     }

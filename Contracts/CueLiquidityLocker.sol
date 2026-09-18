@@ -450,7 +450,6 @@ contract CueLiquidityLocker is Ownable2Step, ReentrancyGuard, IERC721Receiver {
      */
     function unlock(uint32 lockId)
         external
-        onlyDao
         nonReentrant
     {
         LiquidityLock storage lock = _requireLock(lockId);
@@ -587,7 +586,7 @@ contract CueLiquidityLocker is Ownable2Step, ReentrancyGuard, IERC721Receiver {
     function recoverERC20(address token, uint256 amount) external onlyOwner nonReentrant {
         require(
             activeERC20LockCount[token] == 0,
-            "CueLiquidityLocker: token has active lock — use unlock()"
+            "CueLiquidityLocker: token has active lock, use unlock()"
         );
         IERC20(token).safeTransfer(owner(), amount);
     }
@@ -607,7 +606,7 @@ contract CueLiquidityLocker is Ownable2Step, ReentrancyGuard, IERC721Receiver {
         if (activeLockId != 0) {
             require(
                 _locks[activeLockId].unlocked,
-                "CueLiquidityLocker: tokenId has active lock — use unlock()"
+                "CueLiquidityLocker: tokenId has active lock, use unlock()"
             );
         }
         IERC721(token).safeTransferFrom(address(this), owner(), tokenId);

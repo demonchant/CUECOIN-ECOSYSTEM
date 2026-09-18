@@ -193,13 +193,13 @@ contract CueRewardsPool is Ownable2Step, ReentrancyGuard {
     ///         This exactly depletes the initial 200M allocation in 5 years
     ///         assuming zero Vortex Tax top-ups.
     uint256 public constant DEFAULT_RATE_PER_SECOND =
-        (40_000_000 ether) / 31_536_000;
+        uint256(40_000_000 ether) / 31_536_000;
 
     /// @notice Hard ceiling on release rate.
     ///         200M initial / 1 year — maximum possible drain speed.
     ///         DAO cannot set ratePerSecond above this.
     uint256 public constant MAX_RATE_PER_SECOND =
-        (200_000_000 ether) / 31_536_000;
+        uint256(200_000_000 ether) / 31_536_000;
 
     /// @notice Runway threshold that triggers the depletion guard.
     uint256 public constant DEPLETION_RUNWAY = 30 days;
@@ -614,7 +614,7 @@ contract CueRewardsPool is Ownable2Step, ReentrancyGuard {
     function recoverERC20(address token, uint256 amount) external onlyOwner {
         require(
             token != address(cueCoin),
-            "CueRewardsPool: cannot recover CUECOIN — it is the reward reserve"
+            "CueRewardsPool: cannot recover CUECOIN because it is the reward reserve"
         );
         IERC20(token).safeTransfer(owner(), amount);
     }
@@ -840,9 +840,8 @@ contract CueRewardsPool is Ownable2Step, ReentrancyGuard {
         uint256 runway  = balance / ratePerSecond; // seconds
 
         if (runway < DEPLETION_RUNWAY) {
-            if (!depletionGuardActive) {
-                depletionGuardActive = true;
-            }
+            if (depletionGuardActive) return;
+            depletionGuardActive = true;
             uint256 oldRate    = ratePerSecond;
             uint256 newRate    = oldRate / 2;
             if (newRate == 0) newRate = 1; // minimum: 1 wei/second (non-zero rate)

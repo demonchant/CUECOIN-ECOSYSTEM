@@ -253,6 +253,7 @@ contract CueCoin is ERC20, ERC20Permit, ERC20Votes, Ownable2Step, ReentrancyGuar
 
     // ── Trading gate ──
     bool public tradingEnabled;
+    bool public poolsConfigured;
 
     // ── Re-entrancy guard for auto-LP swap ──
     bool private _inAutoSwap;
@@ -419,14 +420,18 @@ contract CueCoin is ERC20, ERC20Permit, ERC20Votes, Ownable2Step, ReentrancyGuar
         address _priceOracle,
         address _lpOracle
     )
-        ERC20("CueCoin", "CUECOIN")
+        ERC20("CueCoin", "CUE")
         ERC20Permit("CueCoin")
         Ownable(msg.sender)
     {
         require(_router         != address(0), "CueCoin: zero router");
-        require(_rewardsPool    != address(0), "CueCoin: zero rewardsPool");
-        require(_tournamentPool != address(0), "CueCoin: zero tournamentPool");
-        require(_daoTreasury    != address(0), "CueCoin: zero daoTreasury");
+        bool noPools = _rewardsPool == address(0)
+            && _tournamentPool == address(0)
+            && _daoTreasury == address(0);
+        bool allPools = _rewardsPool != address(0)
+            && _tournamentPool != address(0)
+            && _daoTreasury != address(0);
+        require(noPools || allPools, "CueCoin: provide all pools or no pools");
         require(_devMultisig    != address(0), "CueCoin: zero devMultisig");
         require(_priceOracle    != address(0), "CueCoin: zero priceOracle");
         require(_lpOracle       != address(0), "CueCoin: zero lpOracle");
@@ -438,6 +443,7 @@ contract CueCoin is ERC20, ERC20Permit, ERC20Votes, Ownable2Step, ReentrancyGuar
         devMultisig    = _devMultisig;
         priceOracle    = _priceOracle;
         lpOracle       = _lpOracle;
+        poolsConfigured = allPools;
 
         // Create CUECOIN/BNB liquidity pair on PancakeSwap
         liquidityPair = IPancakeFactory(dexRouter.factory())
@@ -446,18 +452,22 @@ contract CueCoin is ERC20, ERC20Permit, ERC20Votes, Ownable2Step, ReentrancyGuar
         // ── Fee exclusions — system contracts never pay Vortex Tax ──
         _setFeeExclusion(msg.sender,        true);
         _setFeeExclusion(address(this),     true);
-        _setFeeExclusion(_rewardsPool,      true);
-        _setFeeExclusion(_tournamentPool,   true);
-        _setFeeExclusion(_daoTreasury,      true);
+        if (allPools) {
+            _setFeeExclusion(_rewardsPool,      true);
+            _setFeeExclusion(_tournamentPool,   true);
+            _setFeeExclusion(_daoTreasury,      true);
+        }
         _setFeeExclusion(_devMultisig,      true);  // [V5-1]
         _setFeeExclusion(BURN_ADDRESS,      true);
 
         // ── Whale guard exclusions — large-allocation contracts at deploy ──
         _setWhaleExclusion(msg.sender,      true);
         _setWhaleExclusion(address(this),   true);
-        _setWhaleExclusion(_rewardsPool,    true);
-        _setWhaleExclusion(_tournamentPool, true);
-        _setWhaleExclusion(_daoTreasury,    true);
+        if (allPools) {
+            _setWhaleExclusion(_rewardsPool,    true);
+            _setWhaleExclusion(_tournamentPool, true);
+            _setWhaleExclusion(_daoTreasury,    true);
+        }
         _setWhaleExclusion(_devMultisig,    true);  // [V5-1]
 
         // ── Mint — one time, full supply, to deployer ──
@@ -865,7 +875,7 @@ contract CueCoin is ERC20, ERC20Permit, ERC20Votes, Ownable2Step, ReentrancyGuar
      *         Useful when the threshold was reached but auto-trigger didn't fire
      *         (e.g., no sell transactions occurred to trigger it naturally).
      */
-    function triggerAutoLiquidity() external nonReentrant {
+    function triggerAutoLiquidity() external {
         require(pendingLiquidityTokens > 0, "CueCoin: no pending liquidity");
         require(!_inAutoSwap,               "CueCoin: auto-swap in progress");
         _triggerAutoLiquidity();
@@ -1006,6 +1016,7 @@ contract CueCoin is ERC20, ERC20Permit, ERC20Votes, Ownable2Step, ReentrancyGuar
      */
     function enableTrading() external onlyOwner {
         require(!tradingEnabled, "CueCoin: already enabled");
+        require(poolsConfigured, "CueCoin: pools not configured");
         tradingEnabled     = true;
         lastPriceTimestamp = block.timestamp;
         emit TradingEnabled(block.timestamp);
@@ -1035,6 +1046,37 @@ contract CueCoin is ERC20, ERC20Permit, ERC20Votes, Ownable2Step, ReentrancyGuar
         onlyOwner
         timelocked(keccak256("updatePools"))
     {
+        _updatePools(_rewards, _tournament, _dao, _dev);
+    }
+
+    function governanceUpdatePools(
+        address _rewards,
+        address _tournament,
+        address _dao,
+        address _dev
+    ) external onlyOwner {
+        require(msg.sender.code.length > 0,
+            "CueCoin: governance owner must be a contract");
+        _updatePools(_rewards, _tournament, _dao, _dev);
+    }
+
+    function configureInitialPools(
+        address _rewards,
+        address _tournament,
+        address _dao,
+        address _dev
+    ) external onlyOwner {
+        require(!poolsConfigured, "CueCoin: pools already configured");
+        require(!tradingEnabled, "CueCoin: trading already enabled");
+        _updatePools(_rewards, _tournament, _dao, _dev);
+    }
+
+    function _updatePools(
+        address _rewards,
+        address _tournament,
+        address _dao,
+        address _dev
+    ) internal {
         require(_rewards    != address(0), "CueCoin: zero rewards");
         require(_tournament != address(0), "CueCoin: zero tournament");
         require(_dao        != address(0), "CueCoin: zero dao");
@@ -1055,6 +1097,7 @@ contract CueCoin is ERC20, ERC20Permit, ERC20Votes, Ownable2Step, ReentrancyGuar
         tournamentPool = _tournament;
         daoTreasury    = _dao;
         devMultisig    = _dev;
+        poolsConfigured = true;
 
         // [V5-3] Add exclusions to new addresses
         _setFeeExclusion(_rewards,    true);

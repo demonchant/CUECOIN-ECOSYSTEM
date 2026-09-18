@@ -439,7 +439,7 @@ contract CueVesting is Ownable2Step, ReentrancyGuard {
         // Solvency check: contract must hold enough to cover all obligations
         require(
             cueCoin.balanceOf(address(this)) >= totalPending + totalAmount,
-            "CueVesting: insufficient contract balance — fund first"
+            "CueVesting: insufficient contract balance, fund first"
         );
 
         // Derive cliff and vest timestamps
@@ -823,9 +823,12 @@ contract CueVesting is Ownable2Step, ReentrancyGuard {
             uint256 percentVested
         )
     {
-        schedule    = _requireSchedule(scheduleId);
-        vestedNow   = _computeVested(schedule, block.timestamp);
-        claimableNow = (block.timestamp > pausedUntil) ? _releasable(schedule) : 0;
+        Schedule storage storedSchedule = _schedules[scheduleId];
+        require(scheduleId > 0 && scheduleId < _nextScheduleId,
+            "CueVesting: schedule not found");
+        vestedNow   = _computeVested(storedSchedule, block.timestamp);
+        claimableNow = (block.timestamp > pausedUntil) ? _releasable(storedSchedule) : 0;
+        schedule    = storedSchedule;
         unvestedNow  = schedule.cancelled
                        ? 0                                      // unvested already sent to DAO
                        : schedule.totalAmount - vestedNow;

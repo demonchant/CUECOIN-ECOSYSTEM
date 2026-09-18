@@ -594,6 +594,13 @@ contract CueTaskRegistry is Ownable2Step {
             abi.encode(address(0), uint256(1), uint256(0))
             // token=any qualifying, minBalance=1wei, snapshotBlock: UPDATE BEFORE LAUNCH
         );
+
+        for (uint32 taskId = 1; taskId < _nextTaskId; taskId++) {
+            _tasks[taskId].active = false;
+        }
+        _activeCount[TaskTier.MANDATORY] = 0;
+        _activeCount[TaskTier.ENGAGEMENT] = 0;
+        _activeCount[TaskTier.BONUS] = 0;
     }
 
     // ═══════════════════════════════════════════════════════════

@@ -149,6 +149,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @dev CueCoin v6 exposes ERC20Votes snapshot methods.
 interface ICueCoinVotes {
+    function clock() external view returns (uint48);
     function getPastVotes(address account, uint256 timepoint) external view returns (uint256);
     function getPastTotalSupply(uint256 timepoint) external view returns (uint256);
     function balanceOf(address account) external view returns (uint256);
@@ -164,6 +165,14 @@ interface ICueCoinVotes {
  */
 contract CueDAO is Ownable2Step, ReentrancyGuard {
     using SafeERC20 for IERC20;
+
+    function acceptEcosystemOwnership(address target) external onlyOwner {
+        require(approvedTarget[target], "CueDAO: target not approved");
+        (bool accepted, bytes memory result) = target.call(
+            abi.encodeWithSignature("acceptOwnership()")
+        );
+        require(accepted, _revertMsg(result));
+    }
 
     // ═══════════════════════════════════════════════════════════
     //  CONSTANTS  (bytecode — no actor can change these)
@@ -443,6 +452,10 @@ contract CueDAO is Ownable2Step, ReentrancyGuard {
         returns (uint256 proposalId)
     {
         require(bytes(description).length > 0, "CueDAO: empty description");
+        require(
+            proposalType != ProposalType.UPDATE_TAX_RATES,
+            "CueDAO: token tax rates are immutable"
+        );
 
         if (proposalType == ProposalType.GENERIC_CALL) {
             require(callTarget != address(0),   "CueDAO: zero callTarget");
@@ -453,7 +466,9 @@ contract CueDAO is Ownable2Step, ReentrancyGuard {
         IERC20(address(cueCoin)).safeTransferFrom(msg.sender, address(this), PROPOSAL_DEPOSIT);
 
         // [FIX-1] Lock snapshot — any token movement after this is irrelevant to this proposal
-        uint256 snap = block.timestamp;
+        uint256 currentTimepoint = uint256(cueCoin.clock());
+        require(currentTimepoint > 0, "CueDAO: clock not initialized");
+        uint256 snap = currentTimepoint - 1;
 
         proposalId = ++proposalCount;
         Proposal storage p = proposals[proposalId];
@@ -464,7 +479,7 @@ contract CueDAO is Ownable2Step, ReentrancyGuard {
         p.callData            = callData;
         p.callTarget          = callTarget;
         p.snapshotTimestamp   = snap;
-        p.votingEnds          = snap + VOTING_PERIOD;
+        p.votingEnds          = block.timestamp + VOTING_PERIOD;
         p.snapshotCirculating = _circulatingSupplyAt(snap);
         p.status              = ProposalStatus.ACTIVE;
 
@@ -807,7 +822,6 @@ contract CueDAO is Ownable2Step, ReentrancyGuard {
         if (pt == ProposalType.TEXT)                   { return; }
         if (pt == ProposalType.TREASURY_TRANSFER)      { _execTreasuryTransfer(p);      return; }
         if (pt == ProposalType.UPDATE_REWARD_RATE)     { _execUpdateRewardRate(p);      return; }
-        if (pt == ProposalType.UPDATE_TAX_RATES)       { _execUpdateTaxRates(p);        return; }
         if (pt == ProposalType.UPDATE_POOLS)           { _execUpdatePools(p);           return; }
         if (pt == ProposalType.UPDATE_ORACLES)         { _execUpdateOracles(p);         return; }
         if (pt == ProposalType.UPDATE_MARKETPLACE_FEE) { _execUpdateMarketplaceFee(p);  return; }
@@ -837,33 +851,7 @@ contract CueDAO is Ownable2Step, ReentrancyGuard {
         uint256 newRate = abi.decode(p.callData, (uint256));
         require(rewardsPoolContract != address(0), "CueDAO: rewardsPool not set");
         (bool ok, bytes memory ret) = rewardsPoolContract.call(
-            abi.encodeWithSignature("setMatchRewardRate(uint256)", newRate)
-        );
-        require(ok, _revertMsg(ret));
-    }
-
-    function _execUpdateTaxRates(Proposal storage p) internal {
-        (uint16 burnBps, uint16 lpBps, uint16 rewardsBps,
-         uint16 tournamentBps, uint16 daoBps, uint16 devBps)
-            = abi.decode(p.callData, (uint16,uint16,uint16,uint16,uint16,uint16));
-
-        // Enforce 10% ceiling per component AND in aggregate
-        require(burnBps       <= 1_000, "CueDAO: burn > 10%");
-        require(lpBps         <= 1_000, "CueDAO: lp > 10%");
-        require(rewardsBps    <= 1_000, "CueDAO: rewards > 10%");
-        require(tournamentBps <= 1_000, "CueDAO: tournament > 10%");
-        require(daoBps        <= 1_000, "CueDAO: dao > 10%");
-        require(devBps        <= 1_000, "CueDAO: dev > 10%");
-        require(
-            uint256(burnBps)+lpBps+rewardsBps+tournamentBps+daoBps+devBps <= 1_000,
-            "CueDAO: total tax > 10%"
-        );
-        require(cueCoinContract != address(0), "CueDAO: cueCoin not set");
-        (bool ok, bytes memory ret) = cueCoinContract.call(
-            abi.encodeWithSignature(
-                "setTaxRates(uint16,uint16,uint16,uint16,uint16,uint16)",
-                burnBps, lpBps, rewardsBps, tournamentBps, daoBps, devBps
-            )
+            abi.encodeWithSignature("setMatchRewardPerGame(uint256)", newRate)
         );
         require(ok, _revertMsg(ret));
     }
@@ -874,7 +862,7 @@ contract CueDAO is Ownable2Step, ReentrancyGuard {
         require(cueCoinContract != address(0), "CueDAO: cueCoin not set");
         // CueCoin.updatePools is itself 48h timelocked → 96h total delay
         (bool ok, bytes memory ret) = cueCoinContract.call(
-            abi.encodeWithSignature("updatePools(address,address,address,address)", r, t, d, dev)
+            abi.encodeWithSignature("governanceUpdatePools(address,address,address,address)", r, t, d, dev)
         );
         require(ok, _revertMsg(ret));
     }
@@ -888,7 +876,7 @@ contract CueDAO is Ownable2Step, ReentrancyGuard {
         );
         // Target contract's updateOracles is itself 48h timelocked → 96h total
         (bool ok, bytes memory ret) = target.call(
-            abi.encodeWithSignature("updateOracles(address,address,address)", o0, o1, o2)
+            abi.encodeWithSignature("governanceUpdateOracles(address,address,address)", o0, o1, o2)
         );
         require(ok, _revertMsg(ret));
     }
@@ -922,7 +910,10 @@ contract CueDAO is Ownable2Step, ReentrancyGuard {
         );
         IERC20(address(cueCoin)).safeTransfer(referralContract, amount);
         // Best-effort notification
-        referralContract.call(abi.encodeWithSignature("notifyRefill(uint256)", amount));
+        (bool notified, ) = referralContract.call(
+            abi.encodeWithSignature("notifyRefill(uint256)", amount)
+        );
+        require(notified, "CueDAO: referral refill notification failed");
     }
 
     function _execGenericCall(Proposal storage p) internal {
@@ -959,7 +950,7 @@ contract CueDAO is Ownable2Step, ReentrancyGuard {
 
     function _revertMsg(bytes memory ret) internal pure returns (string memory) {
         if (ret.length < 68) return "CueDAO: call reverted (no reason)";
-        assembly { ret := add(ret, 0x04) }
+        assembly ("memory-safe") { ret := add(ret, 0x04) }
         return abi.decode(ret, (string));
     }
 

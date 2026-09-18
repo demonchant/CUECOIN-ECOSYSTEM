@@ -149,6 +149,8 @@ import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 interface ICueNFT is IERC721 {
     /// @notice Returns the original minting wallet for a token.
     function originalMinterOf(uint256 tokenId) external view returns (address);
+    function tokenTier(uint256 tokenId) external view returns (uint8);
+    function recordSale(uint8 tier, uint256 priceWei) external;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -169,7 +171,8 @@ contract CueMarketplace is Ownable2Step, ReentrancyGuard, IERC721Receiver {
     //  CONSTANTS  (bytecode — nothing can change these)
     // ═══════════════════════════════════════════════════════════
 
-    uint256 public constant PLATFORM_FEE_BPS           = 100;  // 1%
+    uint256 public constant DEFAULT_PLATFORM_FEE_BPS   = 100;  // 1%
+    uint256 public constant MAX_PLATFORM_FEE_BPS       = 500;  // 5%
     uint256 public constant ROYALTY_BPS                 = 500;  // 5% total
     uint256 public constant MINTER_SHARE_BPS            = 250;  // 2.5% to minter
     uint256 public constant BURN_SHARE_BPS              = 250;  // 2.5% burned
@@ -289,6 +292,7 @@ contract CueMarketplace is Ownable2Step, ReentrancyGuard, IERC721Receiver {
     // ── Adjustable auction params ──
     uint256 public minBidIncrementBps;
     uint256 public bidExtensionWindow;
+    uint256 public platformFeeBps;
 
     // ── 7-day floor oracle (ring buffer) ──
     SaleRecord[FLOOR_HISTORY_SIZE] private _saleHistory;
@@ -353,6 +357,7 @@ contract CueMarketplace is Ownable2Step, ReentrancyGuard, IERC721Receiver {
     event RefundWithdrawn(address indexed user, uint256 amount);
     event PriceUpdated(uint32 indexed listingId, uint256 newPrice);
     event FloorUpdated(uint256 newFloor, uint256 timestamp);
+    event PlatformFeeUpdated(uint256 oldFeeBps, uint256 newFeeBps);
 
     event NftContractApproved(address indexed nftContract);
     event NftContractRevoked(address indexed nftContract);
@@ -419,6 +424,7 @@ contract CueMarketplace is Ownable2Step, ReentrancyGuard, IERC721Receiver {
 
         minBidIncrementBps = DEFAULT_MIN_BID_INCREMENT_BPS;
         bidExtensionWindow = DEFAULT_BID_EXTENSION;
+        platformFeeBps     = DEFAULT_PLATFORM_FEE_BPS;
 
         approvedNftContract[_cueNFT] = true;
         emit NftContractApproved(_cueNFT);
@@ -579,7 +585,7 @@ contract CueMarketplace is Ownable2Step, ReentrancyGuard, IERC721Receiver {
         nonReentrant
         returns (uint32 listingId)
     {
-        require(tokenIds.length >= 2,                          "CueMarketplace: bundle needs ≥2 tokens");
+        require(tokenIds.length >= 2,                          "CueMarketplace: bundle needs at least 2 tokens");
         require(tokenIds.length <= MAX_BUNDLE_SIZE,            "CueMarketplace: bundle too large");
         require(price > 0,                                     "CueMarketplace: zero price");
         _requireApprovedNft(nftContract);
@@ -989,6 +995,14 @@ contract CueMarketplace is Ownable2Step, ReentrancyGuard, IERC721Receiver {
         bidExtensionWindow = window;
     }
 
+    function setPlatformFee(uint256 newFeeBps) external onlyOwner {
+        require(newFeeBps <= MAX_PLATFORM_FEE_BPS,
+            "CueMarketplace: platform fee exceeds 5 percent");
+        uint256 oldFeeBps = platformFeeBps;
+        platformFeeBps = newFeeBps;
+        emit PlatformFeeUpdated(oldFeeBps, newFeeBps);
+    }
+
     // ═══════════════════════════════════════════════════════════
     //  PAUSE — OWNER OR GUARDIAN
     // ═══════════════════════════════════════════════════════════
@@ -1107,7 +1121,7 @@ contract CueMarketplace is Ownable2Step, ReentrancyGuard, IERC721Receiver {
      */
     function previewFees(uint256 salePrice)
         external
-        pure
+        view
         returns (
             uint256 platformFee,
             uint256 minterRoyalty,
@@ -1265,14 +1279,22 @@ contract CueMarketplace is Ownable2Step, ReentrancyGuard, IERC721Receiver {
         // Resolve minter — try ICueNFT.originalMinterOf for each token
         // For single-token listings: minter of that token
         // For bundles: minter of the first token (known simplification, documented above)
-        address minter = _resolveMinter(nftContract, tokenIds[0], seller);
-
         // Distribute payments (CEI: state already updated by callers)
         if (platformFee > 0) {
             cueCoin.safeTransfer(daoTreasury, platformFee);
         }
         if (minterRoyalty > 0) {
-            cueCoin.safeTransfer(minter, minterRoyalty);
+            uint256 royaltyShare = minterRoyalty / tokenIds.length;
+            uint256 royaltyRemainder = minterRoyalty % tokenIds.length;
+            for (uint256 i = 0; i < tokenIds.length; i++) {
+                uint256 payment = royaltyShare + (i == 0 ? royaltyRemainder : 0);
+                if (payment > 0) {
+                    cueCoin.safeTransfer(
+                        _resolveMinter(nftContract, tokenIds[i], seller),
+                        payment
+                    );
+                }
+            }
         }
         if (burnRoyalty > 0) {
             cueCoin.safeTransfer(BURN_ADDRESS, burnRoyalty);
@@ -1284,6 +1306,10 @@ contract CueMarketplace is Ownable2Step, ReentrancyGuard, IERC721Receiver {
         // Transfer NFT(s) to buyer
         for (uint256 i = 0; i < tokenIds.length; i++) {
             IERC721(nftContract).safeTransferFrom(address(this), buyer, tokenIds[i]);
+            try ICueNFT(nftContract).tokenTier(tokenIds[i]) returns (uint8 tier) {
+                uint256 tokenPrice = salePrice / tokenIds.length;
+                try ICueNFT(nftContract).recordSale(tier, tokenPrice) {} catch {}
+            } catch {}
         }
 
         // Record wash trade history
@@ -1342,7 +1368,7 @@ contract CueMarketplace is Ownable2Step, ReentrancyGuard, IERC721Receiver {
      */
     function _computeFees(uint256 salePrice)
         internal
-        pure
+        view
         returns (
             uint256 platformFee,
             uint256 minterRoyalty,
@@ -1350,7 +1376,7 @@ contract CueMarketplace is Ownable2Step, ReentrancyGuard, IERC721Receiver {
             uint256 sellerProceeds
         )
     {
-        platformFee   = (salePrice * PLATFORM_FEE_BPS) / 10_000;
+        platformFee   = (salePrice * platformFeeBps) / 10_000;
         minterRoyalty = (salePrice * MINTER_SHARE_BPS) / 10_000;
         burnRoyalty   = (salePrice * BURN_SHARE_BPS)   / 10_000;
         uint256 totalDeducted = platformFee + minterRoyalty + burnRoyalty;

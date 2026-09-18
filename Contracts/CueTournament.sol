@@ -241,6 +241,7 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
     // ── Admin constants ──
     uint256 public constant TREASURY_UPDATE_DELAY = 48 hours;
     uint256 public constant MAX_ORACLE_EXPIRY      = 2  hours; // max allowed expiry delta from now
+    uint256 public constant PROGRESS_TIMEOUT        = 24 hours;
 
     address public constant BURN_ADDRESS =
         0x000000000000000000000000000000000000dEaD;
@@ -248,7 +249,7 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
     // ── EIP-712 type hash ──
     bytes32 public constant MATCH_RESULT_TYPEHASH = keccak256(
         "MatchResult(uint32 tournamentId,uint8 round,uint8 matchIndex,"
-        "address winner,address loser,uint256 nonce,uint256 expiry)"
+        "address winner,address loser,bytes32 matchHistoryRoot,uint256 nonce,uint256 expiry)"
     );
 
     // ═══════════════════════════════════════════════════════════
@@ -290,6 +291,7 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
         string           name;
         uint256          registrationDeadline;
         uint256          totalPot;
+        uint256          sponsoredAmount;
         uint8            playerCount;
         uint8            currentRound;
         uint8            totalRounds;
@@ -298,6 +300,7 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
         bytes32          matchHistoryRoot;
         uint256          createdAt;
         uint256          completedAt;
+        uint256          lastProgressAt;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -331,10 +334,12 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
 
     // ── Per-tournament oracle nonce (replay protection) ──
     mapping(uint32 => uint256) public tournamentNonce;
+    mapping(uint32 => bool) public nftPrizeMinted;
 
     // ── Refunds for cancelled tournaments ──
     // pendingRefund[player][tournamentId] = entry fee to return
     mapping(address => mapping(uint32 => uint256)) public pendingRefund;
+    uint256 public totalTournamentLiability;
 
     // ── Oracle whitelist ──
     mapping(address => bool) public isOracle;
@@ -567,6 +572,7 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
             name:                  name,
             registrationDeadline:  registrationDeadline,
             totalPot:              0,
+            sponsoredAmount:       0,
             playerCount:           0,
             currentRound:          0,
             totalRounds:           totalRounds,
@@ -574,7 +580,8 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
             runnerUp:              address(0),
             matchHistoryRoot:      bytes32(0),
             createdAt:             block.timestamp,
-            completedAt:           0
+            completedAt:           0,
+            lastProgressAt:        0
         });
 
         totalTournamentsCreated++;
@@ -632,6 +639,8 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
 
         // Pull entry fee
         cueCoin.safeTransferFrom(player, address(this), t.entryFee);
+        t.totalPot += t.entryFee;
+        totalTournamentLiability += t.entryFee;
 
         // Assign slot
         uint8 slot = t.playerCount;
@@ -645,12 +654,11 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
 
         // If bracket is now full → start tournament
         if (t.playerCount == t.bracketSize) {
-            t.totalPot = t.entryFee * t.bracketSize;
             t.status   = TournamentStatus.IN_PROGRESS;
+            t.lastProgressAt = block.timestamp;
 
             // Clear refund tracking — prizes will be paid instead
             // (done per-player in _clearRefundsOnStart to save gas on cancel path)
-            _clearRefundsOnStart(tournamentId, roundParticipants[tournamentId][0]);
 
             emit TournamentStarted(tournamentId, roundParticipants[tournamentId][0]);
         }
@@ -751,6 +759,7 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
             matchIndex,
             winner,
             loser,
+            matchHistoryRoot,
             nonce,
             expiry
         ));
@@ -763,6 +772,7 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
         // Record match result
         matchWinner[matchKey] = winner;
         roundMatchesCompleted[tournamentId][round]++;
+        t.lastProgressAt = block.timestamp;
 
         emit MatchResultSubmitted(tournamentId, round, matchIndex, winner, loser);
 
@@ -793,6 +803,9 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
         );
 
         t.status = TournamentStatus.CANCELLED;
+        totalTournamentLiability -= t.sponsoredAmount;
+        t.totalPot -= t.sponsoredAmount;
+        t.sponsoredAmount = 0;
         emit TournamentCancelled(tournamentId, msg.sender);
     }
 
@@ -819,10 +832,27 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
         );
         require(
             t.playerCount < t.bracketSize,
-            "CueTournament: bracket was full — use normal flow"
+            "CueTournament: bracket was full, use normal flow"
         );
 
         t.status = TournamentStatus.CANCELLED;
+        totalTournamentLiability -= t.sponsoredAmount;
+        t.totalPot -= t.sponsoredAmount;
+        t.sponsoredAmount = 0;
+        emit TournamentExpired(tournamentId);
+    }
+
+    function expireStalledTournament(uint32 tournamentId) external nonReentrant {
+        Tournament storage t = _requireTournament(tournamentId);
+        require(t.status == TournamentStatus.IN_PROGRESS,
+            "CueTournament: tournament not in progress");
+        require(block.timestamp > t.lastProgressAt + PROGRESS_TIMEOUT,
+            "CueTournament: progress timeout not reached");
+
+        t.status = TournamentStatus.CANCELLED;
+        totalTournamentLiability -= t.sponsoredAmount;
+        t.totalPot -= t.sponsoredAmount;
+        t.sponsoredAmount = 0;
         emit TournamentExpired(tournamentId);
     }
 
@@ -849,6 +879,7 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
         require(amount > 0, "CueTournament: no refund");
 
         pendingRefund[msg.sender][tournamentId] = 0;
+        totalTournamentLiability -= amount;
         cueCoin.safeTransfer(msg.sender, amount);
 
         emit RefundClaimed(tournamentId, msg.sender, amount);
@@ -864,6 +895,20 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
         require(!isOracle[oracle],    "CueTournament: already oracle");
         isOracle[oracle] = true;
         emit OracleAdded(oracle);
+    }
+
+    function allocateTaxReserve(uint32 tournamentId, uint256 amount) external onlyOwner {
+        Tournament storage t = _requireTournament(tournamentId);
+        require(t.status == TournamentStatus.REGISTRATION,
+            "CueTournament: registration closed");
+        require(amount > 0, "CueTournament: zero sponsorship");
+        require(
+            cueCoin.balanceOf(address(this)) >= totalTournamentLiability + amount,
+            "CueTournament: insufficient unallocated reserve"
+        );
+        t.sponsoredAmount += amount;
+        t.totalPot += amount;
+        totalTournamentLiability += amount;
     }
 
     /// @notice Remove an oracle signer. Owner-only.
@@ -965,7 +1010,7 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
     function recoverERC20(address token, uint256 amount) external onlyOwner {
         require(
             token != address(cueCoin),
-            "CueTournament: cannot recover CUECOIN — it is the prize reserve"
+            "CueTournament: cannot recover CUECOIN because it is the prize reserve"
         );
         IERC20(token).safeTransfer(owner(), amount);
     }
@@ -1068,6 +1113,7 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
         uint8   matchIndex,
         address winner,
         address loser,
+        bytes32 matchHistoryRoot,
         uint256 nonce,
         uint256 expiry
     )
@@ -1078,7 +1124,7 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
         return _hashTypedDataV4(keccak256(abi.encode(
             MATCH_RESULT_TYPEHASH,
             tournamentId, round, matchIndex,
-            winner, loser, nonce, expiry
+            winner, loser, matchHistoryRoot, nonce, expiry
         )));
     }
 
@@ -1198,6 +1244,8 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
             uint256 toDao
         ) = _computePrizes(totalPot);
 
+        totalTournamentLiability -= totalPot;
+
         // CEI: update all state before external transfers
         totalCueBurned  += burned;
         totalDaoPaid    += toDao;
@@ -1232,6 +1280,7 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
         bytes32 matchHistoryRoot,
         uint8   totalRounds
     ) internal {
+        if (nftPrizeMinted[tournamentId]) return;
         if (tier == TournamentTier.WEEKLY) {
             // Weekly League has no NFT prize
             return;
@@ -1247,6 +1296,7 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
             try cueNft.mintRare(champion, totalRounds, matchHistoryRoot)
                 returns (uint256 tokenId)
             {
+                nftPrizeMinted[tournamentId] = true;
                 emit NftPrizeMinted(tournamentId, champion, tokenId, 1); // TIER_RARE = 1
             } catch Error(string memory reason) {
                 emit NftMintFailed(tournamentId, champion, reason);
@@ -1259,6 +1309,7 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
             try cueNft.mintEpic(champion, tName, matchHistoryRoot)
                 returns (uint256 tokenId)
             {
+                nftPrizeMinted[tournamentId] = true;
                 emit NftPrizeMinted(tournamentId, champion, tokenId, 2); // TIER_EPIC = 2
             } catch Error(string memory reason) {
                 emit NftMintFailed(tournamentId, champion, reason);
@@ -1271,6 +1322,7 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
             try cueNft.mintLegendary(champion, tName, matchHistoryRoot)
                 returns (uint256 tokenId)
             {
+                nftPrizeMinted[tournamentId] = true;
                 emit NftPrizeMinted(tournamentId, champion, tokenId, 3); // TIER_LEGENDARY = 3
             } catch Error(string memory reason) {
                 emit NftMintFailed(tournamentId, champion, reason);
@@ -1278,6 +1330,24 @@ contract CueTournament is EIP712, Ownable2Step, ReentrancyGuard {
                 emit NftMintFailed(tournamentId, champion, "mintLegendary: unknown error");
             }
         }
+    }
+
+    function retryNftPrize(uint32 tournamentId) external nonReentrant {
+        Tournament storage t = _requireTournament(tournamentId);
+        require(t.status == TournamentStatus.COMPLETED,
+            "CueTournament: tournament not completed");
+        require(t.tier != TournamentTier.WEEKLY,
+            "CueTournament: weekly tier has no NFT prize");
+        require(!nftPrizeMinted[tournamentId],
+            "CueTournament: NFT prize already minted");
+        _mintNftPrize(
+            tournamentId,
+            t.winner,
+            t.tier,
+            t.name,
+            t.matchHistoryRoot,
+            t.totalRounds
+        );
     }
 
     // ═══════════════════════════════════════════════════════════

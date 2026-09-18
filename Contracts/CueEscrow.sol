@@ -325,6 +325,7 @@ contract CueEscrow is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
     ///      Key: _nonceKey(matchId, nonce)
     struct HighValueFirstSig {
         address signer;
+        bytes32 digest;
         bool    submitted;
     }
 
@@ -716,7 +717,7 @@ contract CueEscrow is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
         // [V2-3] Reject join on an expired open match
         require(
             block.timestamp < m.createdAt + OPEN_MATCH_EXPIRY,
-            "CueEscrow: open match has expired — use expireMatch()"
+            "CueEscrow: open match expired, use expireMatch()"
         );
 
         // Private match gate
@@ -843,6 +844,7 @@ contract CueEscrow is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
 
         // ── Interactions ──
         _executeVictoryPayout(matchId, m, winner, nftBonusWei);
+        _notifyWagerVolume(m);
         _notifyReferral(winner);
     }
 
@@ -903,7 +905,11 @@ contract CueEscrow is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
         address signer = digest.recover(signature);
         require(_isOracle(signer), "CueEscrow: invalid oracle signature");
 
-        _hvFirstSig[nonceKey] = HighValueFirstSig({ signer: signer, submitted: true });
+        _hvFirstSig[nonceKey] = HighValueFirstSig({
+            signer: signer,
+            digest: digest,
+            submitted: true
+        });
 
         emit HighValueFirstSigSubmitted(matchId, signer, nonce);
     }
@@ -939,6 +945,14 @@ contract CueEscrow is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
         require(m.isHighValue,                   "CueEscrow: not a high-value match");
         require(_isParticipant(m, winner),       "CueEscrow: winner not a participant");
         require(block.timestamp <= expiry,       "CueEscrow: certificate expired");
+        require(
+            expiry <= block.timestamp + VICTORY_CERT_EXPIRY,
+            "CueEscrow: expiry window too long"
+        );
+        require(
+            nftBonusWei <= (m.wagerPerPlayer * MAX_NFT_BONUS_BPS) / 10_000,
+            "CueEscrow: nft bonus exceeds cap"
+        );
 
         bytes32 nonceKey = _nonceKey(matchId, nonce);
         require(!usedNonces[nonceKey],           "CueEscrow: nonce already used");
@@ -947,6 +961,10 @@ contract CueEscrow is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
         bytes32 digest = _hashTypedDataV4(keccak256(abi.encode(
             VICTORY_TYPEHASH, matchId, winner, nftBonusWei, nonce, expiry
         )));
+        require(
+            digest == _hvFirstSig[nonceKey].digest,
+            "CueEscrow: certificate differs from first signature"
+        );
         address signer2 = digest.recover(signature);
         require(_isOracle(signer2),              "CueEscrow: invalid second oracle signature");
         require(
@@ -962,11 +980,13 @@ contract CueEscrow is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
 
         // ── Effects ──
         usedNonces[nonceKey] = true;
+        delete _hvFirstSig[nonceKey];
         m.status             = MatchStatus.RESOLVED;
         totalMatchesResolved++;
 
         // ── Interactions ──
         _executeVictoryPayout(matchId, m, winner, nftBonusWei);
+        _notifyWagerVolume(m);
         _notifyReferral(winner);
     }
 
@@ -1168,7 +1188,7 @@ contract CueEscrow is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
         // [V2-7] Proposal must not have expired
         require(
             block.timestamp <= m.mutualCancelProposedAt + MUTUAL_CANCEL_EXPIRY,
-            "CueEscrow: mutual cancel proposal has expired — clear it and re-propose"
+            "CueEscrow: mutual cancel proposal expired, clear it and propose again"
         );
 
         // ── Effects ──
@@ -1304,12 +1324,27 @@ contract CueEscrow is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
         if (referralContract == address(0)) return;
         if (firstMatchNotified[player]) return;
 
-        firstMatchNotified[player] = true;
-
         // Absorb any revert — referral tracking is non-critical
-        referralContract.call(
+        (bool completed, ) = referralContract.call(
             abi.encodeWithSignature("recordMatchCompletion(address)", player)
         );
+        if (completed) firstMatchNotified[player] = true;
+    }
+
+    function _notifyWagerVolume(Match storage m) internal {
+        if (referralContract == address(0)) return;
+        uint256 totalPot = m.wagerPerPlayer * 2;
+        (bool playerANotified, ) = referralContract.call(
+            abi.encodeWithSignature(
+                "recordWagerVolume(address,uint256)", m.playerA, totalPot
+            )
+        );
+        (bool playerBNotified, ) = referralContract.call(
+            abi.encodeWithSignature(
+                "recordWagerVolume(address,uint256)", m.playerB, totalPot
+            )
+        );
+        if (!playerANotified && !playerBNotified) return;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -1628,6 +1663,24 @@ contract CueEscrow is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
         address _oracle1,
         address _oracle2
     ) external onlyOwner timelocked(keccak256("updateOracles")) {
+        _updateOracles(_oracle0, _oracle1, _oracle2);
+    }
+
+    function governanceUpdateOracles(
+        address _oracle0,
+        address _oracle1,
+        address _oracle2
+    ) external onlyOwner {
+        require(msg.sender.code.length > 0,
+            "CueEscrow: governance owner must be a contract");
+        _updateOracles(_oracle0, _oracle1, _oracle2);
+    }
+
+    function _updateOracles(
+        address _oracle0,
+        address _oracle1,
+        address _oracle2
+    ) internal {
         require(_oracle0 != address(0), "CueEscrow: zero oracle0");
         require(_oracle1 != address(0), "CueEscrow: zero oracle1");
         require(_oracle2 != address(0), "CueEscrow: zero oracle2");
@@ -1751,7 +1804,10 @@ contract CueEscrow is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
         remaining = (used < cap) ? cap - used : 0;
         pctUsed   = (cap > 0) ? (used * 100) / cap : 0;
     }
-     *         Emergency use — e.g. a malicious oracle rotation was queued.
+
+    /**
+     * @notice Cancel a queued timelock operation.
+     *         Emergency use, for example when a malicious oracle rotation was queued.
      *         Cannot cancel already-executed operations.
      *
      * @param operationId  The opId emitted in the TimelockQueued event.

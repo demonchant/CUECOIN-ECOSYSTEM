@@ -610,7 +610,7 @@ contract CueReferral is Ownable2Step, ReentrancyGuard, Pausable {
         require(pending > 0, "CueReferral: no pending reward");
 
         uint256 payout = pending < rewardPool ? pending : rewardPool;
-        require(payout > 0, "CueReferral: pool empty — await DAO refill");
+        require(payout > 0, "CueReferral: pool empty, await DAO refill");
 
         rr.pendingReward      -= payout;
         rr.totalRewardClaimed += payout;
@@ -636,7 +636,7 @@ contract CueReferral is Ownable2Step, ReentrancyGuard, Pausable {
         require(accrued > 0, "CueReferral: no revenue accrued");
 
         uint256 payout = accrued < rewardPool ? accrued : rewardPool;
-        require(payout > 0, "CueReferral: pool empty — await DAO refill");
+        require(payout > 0, "CueReferral: pool empty, await DAO refill");
 
         rr.revenueAccrued      -= payout;
         rr.totalRevenueClaimed += payout;
@@ -656,7 +656,7 @@ contract CueReferral is Ownable2Step, ReentrancyGuard, Pausable {
         require(queued > 0, "CueReferral: no referee bonus pending");
 
         uint256 payout = queued < rewardPool ? queued : rewardPool;
-        require(payout > 0, "CueReferral: pool empty — await DAO refill");
+        require(payout > 0, "CueReferral: pool empty, await DAO refill");
 
         pendingRefereeBonus[msg.sender] -= payout;
         rewardPool                      -= payout;
@@ -755,9 +755,6 @@ contract CueReferral is Ownable2Step, ReentrancyGuard, Pausable {
 
         // Step 4: credit reward
         bool funded = rewardPool >= reward;
-        if (funded) {
-            rewardPool -= reward;
-        }
         // Always add to pendingReward — pool services it at claimRewards() time
         rr.pendingReward      += reward;
         rr.totalRewardAccrued += reward;
@@ -809,11 +806,10 @@ contract CueReferral is Ownable2Step, ReentrancyGuard, Pausable {
         else return;
 
         if (rr.badgeMinted & (1 << bit) != 0) return;
-        rr.badgeMinted |= uint8(1 << bit);
-
         try nftContract.mintBadge(referrer, badgeTier, referralCount)
             returns (uint256 tokenId)
         {
+            rr.badgeMinted |= uint8(1 << bit);
             emit BadgeMinted(referrer, badgeTier, tokenId);
         } catch (bytes memory reason) {
             emit BadgeMintFailed(referrer, badgeTier, reason);

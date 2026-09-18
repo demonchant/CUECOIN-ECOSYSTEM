@@ -202,6 +202,7 @@ contract CueSitAndGo is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
     /// @notice [V2-1] Pending first oracle signature.
     struct FirstSig {
         address signer;       // Oracle that signed first
+        bytes32 digest;       // Exact certificate approved by the first oracle
         uint256 submittedAt;  // For FIRST_SIG_EXPIRY check [V2-4]
         bool    exists;
     }
@@ -212,6 +213,8 @@ contract CueSitAndGo is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
 
     IERC20 public immutable cueCoin;
     address public devMultisig;
+    address public rewardsPool;
+    address public referralContract;
 
     // ── Oracle set — 3 registered signers, 2-of-3 required [V2-1] ──
     address[3] public oracles;
@@ -307,6 +310,7 @@ contract CueSitAndGo is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
 
     /// @notice [V2-4] Stale first sig expired before second oracle arrived.
     event FirstSignatureExpired(bytes32 indexed gameId, uint256 nonce, address staleSigner);
+    event IntegrationsUpdated(address rewardsPool, address referralContract);
 
     event OraclesUpdated(address oracle0, address oracle1, address oracle2);
     event DevMultisigUpdated(address indexed oldDev, address indexed newDev);
@@ -501,9 +505,10 @@ contract CueSitAndGo is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
         require(!gameResolved[gameId],                    "SitAndGo: already resolved");
 
         // ── EIP-712 verification ──
-        address signer = _hashTypedDataV4(
+        bytes32 digest = _hashTypedDataV4(
             _buildStructHash(gameId, first, second, nonce, expiry)
-        ).recover(sig);
+        );
+        address signer = digest.recover(sig);
         require(_isOracle(signer), "SitAndGo: not a registered oracle");
 
         // ── Winner fraud guards — fail fast ──
@@ -525,6 +530,7 @@ contract CueSitAndGo is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
 
         _firstSig[nonceKey] = FirstSig({
             signer:      signer,
+            digest:      digest,
             submittedAt: block.timestamp,
             exists:      true
         });
@@ -578,13 +584,18 @@ contract CueSitAndGo is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
         require(_firstSig[nonceKey].exists,   "SitAndGo: submit first signature first");
         require(
             block.timestamp <= _firstSig[nonceKey].submittedAt + FIRST_SIG_EXPIRY,
-            "SitAndGo: first signature expired — resubmit"
+            "SitAndGo: first signature expired, resubmit"
         );
 
         // ── [V2-1] Verify second signature ──
-        address signer2 = _hashTypedDataV4(
+        bytes32 digest = _hashTypedDataV4(
             _buildStructHash(gameId, first, second, nonce, expiry)
-        ).recover(sig);
+        );
+        require(
+            digest == _firstSig[nonceKey].digest,
+            "SitAndGo: certificate differs from first signature"
+        );
+        address signer2 = digest.recover(sig);
         require(_isOracle(signer2), "SitAndGo: not a registered oracle");
 
         // ── [V2-1] Oracles must be DISTINCT — closes oracle key collusion ──
@@ -678,6 +689,22 @@ contract CueSitAndGo is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
         cueCoin.safeTransfer(BURN_ADDRESS, burnAmt);
         cueCoin.safeTransfer(devMultisig,  devAmt);
 
+        if (rewardsPool != address(0)) {
+            (bool rewardPaid, ) = rewardsPool.call(
+                abi.encodeWithSignature("payMatchReward(address)", first)
+            );
+            if (!rewardPaid) {}
+        }
+        if (referralContract != address(0)) {
+            (bool firstRecorded, ) = referralContract.call(
+                abi.encodeWithSignature("recordMatchCompletion(address)", first)
+            );
+            (bool secondRecorded, ) = referralContract.call(
+                abi.encodeWithSignature("recordMatchCompletion(address)", second)
+            );
+            if (!firstRecorded && !secondRecorded) {}
+        }
+
         totalCueCoinPaidOut += firstAmt + secondAmt;
         totalCueCoinBurned  += burnAmt;
         totalCueCoinToDev   += devAmt;
@@ -716,10 +743,8 @@ contract CueSitAndGo is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
         for (uint8 i = 0; i < PLAYERS_PER_GAME; ) {
             address player = g.players[i];
             if (player != address(0)) {
-                (bool ok,) = address(cueCoin).call(
-                    abi.encodeWithSelector(IERC20.transfer.selector, player, g.entryFee)
-                );
-                if (ok) emit PlayerRefunded(gameId, player, g.entryFee);
+                cueCoin.safeTransfer(player, g.entryFee);
+                emit PlayerRefunded(gameId, player, g.entryFee);
             }
             unchecked { ++i; }
         }
@@ -978,6 +1003,19 @@ contract CueSitAndGo is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
         onlyOwner
         timelocked(keccak256("updateOracles"))
     {
+        _updateOracles(_o0, _o1, _o2);
+    }
+
+    function governanceUpdateOracles(address _o0, address _o1, address _o2)
+        external
+        onlyOwner
+    {
+        require(msg.sender.code.length > 0,
+            "SitAndGo: governance owner must be a contract");
+        _updateOracles(_o0, _o1, _o2);
+    }
+
+    function _updateOracles(address _o0, address _o1, address _o2) internal {
         require(_o0 != address(0) && _o1 != address(0) && _o2 != address(0),
             "SitAndGo: zero oracle");
         require(_o0 != _o1 && _o1 != _o2 && _o0 != _o2,
@@ -1001,6 +1039,17 @@ contract CueSitAndGo is EIP712, Ownable2Step, ReentrancyGuard, Pausable {
         require(_devMultisig != address(0), "SitAndGo: zero devMultisig");
         emit DevMultisigUpdated(devMultisig, _devMultisig);
         devMultisig = _devMultisig;
+    }
+
+    function setIntegrations(address _rewardsPool, address _referralContract)
+        external
+        onlyOwner
+    {
+        require(_rewardsPool != address(0), "SitAndGo: zero rewards pool");
+        require(_referralContract != address(0), "SitAndGo: zero referral contract");
+        rewardsPool = _rewardsPool;
+        referralContract = _referralContract;
+        emit IntegrationsUpdated(_rewardsPool, _referralContract);
     }
 
     /**
