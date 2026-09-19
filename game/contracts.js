@@ -45,7 +45,7 @@ function requiredAddress(mode) {
 }
 
 export function deploymentStatus(mode) {
-  if (mode === "practice") return { ready: true, label: "Local practice" };
+  if (mode === "practice") return { ready: true, label: "Local free play" };
   const tokenReady = addressConfigured(config().cueCoinAddress);
   const contractReady = addressConfigured(requiredAddress(mode));
   const backendReady = Boolean(config().gameApiUrl);

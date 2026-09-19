@@ -1,24 +1,31 @@
-import { BALL_RADIUS, POCKETS, TABLE, CueStrikeEngine, groupForBall } from "./engine.js";
+import { BALL_RADIUS, BAULK_X, POCKETS, TABLE, CueStrikeEngine, groupForBall } from "./engine.js";
 import { GAME_MODES, TOURNAMENT_TIERS, WAGER_TIERS, actionPlan, directMatchPayout, formatCue, sitAndGoPayout, tournamentPayout } from "./economy.js";
 import { connectGameWallet, deploymentStatus, enterPaidMode, hashTranscript } from "./contracts.js";
 
 const byId = (id) => document.getElementById(id);
 const canvas = byId("gameCanvas");
 const context = canvas.getContext("2d");
+const isNativeApp = Boolean(window.Capacitor?.isNativePlatform?.());
+document.documentElement.classList.toggle("nativeApp", isNativeApp);
+const LOGICAL_WIDTH = 1000;
+const LOGICAL_HEIGHT = 540;
+const FIXED_STEP = 1 / 240;
 const state = {
   mode: "practice",
   engine: null,
   wallet: null,
   dragging: false,
   aimAngle: 0,
-  power: 0,
+  power: 0.45,
   cpuTimer: null,
   sequence: 0,
   transcript: [],
   sound: true,
   aimGuide: true,
   motion: true,
-  lastFrame: performance.now()
+  lastFrame: performance.now(),
+  accumulator: 0,
+  renderScale: 1
 };
 
 const colors = {
@@ -34,8 +41,11 @@ function record(event) {
   });
   if (event.type === "pocket") playTone(event.ballId === 0 ? 135 : 430, 0.08);
   if (event.type === "shot") playTone(210, 0.035);
+  if (event.type === "shot") void haptic("LIGHT");
+  if (event.type === "pocket") void haptic(event.ballId === 0 ? "HEAVY" : "MEDIUM");
   if (event.type === "gameOver") void showResult(event);
   updateScore();
+  updateControls();
 }
 
 function newEngine(mode = state.mode) {
@@ -46,15 +56,20 @@ function newEngine(mode = state.mode) {
   state.engine.players[0].name = "You";
   if (mode !== "practice") state.engine.players[1].name = "CueBot";
   byId("gameOverlay").classList.add("hidden");
-  state.power = 0;
+  state.power = 0.45;
+  state.aimAngle = 0;
+  state.accumulator = 0;
+  byId("powerSlider").value = "45";
+  byId("powerValue").value = "45";
   updateScore();
+  updateControls();
 }
 
 function canvasPoint(event) {
   const rectangle = canvas.getBoundingClientRect();
   return {
-    x: (event.clientX - rectangle.left) * canvas.width / rectangle.width,
-    y: (event.clientY - rectangle.top) * canvas.height / rectangle.height
+    x: (event.clientX - rectangle.left) * LOGICAL_WIDTH / rectangle.width,
+    y: (event.clientY - rectangle.top) * LOGICAL_HEIGHT / rectangle.height
   };
 }
 
@@ -70,32 +85,41 @@ canvas.addEventListener("pointerdown", (event) => {
     return;
   }
   if (state.engine.phase !== "aiming") return;
-  const cue = state.engine.cueBall;
-  if (Math.hypot(point.x - cue.x, point.y - cue.y) > 90) return;
   state.dragging = true;
-  state.power = 0;
+  aimAt(point);
   canvas.setPointerCapture(event.pointerId);
 });
 
 canvas.addEventListener("pointermove", (event) => {
   if (!state.dragging) return;
-  const point = canvasPoint(event);
-  const cue = state.engine.cueBall;
-  state.aimAngle = Math.atan2(cue.y - point.y, cue.x - point.x);
-  state.power = Math.min(1, Math.hypot(point.x - cue.x, point.y - cue.y) / 180);
-  byId("powerFill").style.width = `${Math.round(state.power * 100)}%`;
+  aimAt(canvasPoint(event));
 });
 
-function releaseShot() {
-  if (!state.dragging) return;
-  state.dragging = false;
-  if (state.power >= 0.04) state.engine.shoot(state.aimAngle, state.power);
-  state.power = 0;
-  byId("powerFill").style.width = "0%";
+function aimAt(point) {
+  const cue = state.engine.cueBall;
+  const distance = Math.hypot(point.x - cue.x, point.y - cue.y);
+  if (distance < 8) return;
+  const requestedAngle = Math.atan2(point.y - cue.y, point.x - cue.x);
+  state.aimAngle = state.engine.mustShootForward
+    ? Math.max(-1.47, Math.min(1.47, requestedAngle))
+    : requestedAngle;
 }
 
-canvas.addEventListener("pointerup", releaseShot);
-canvas.addEventListener("pointercancel", releaseShot);
+function releaseAim() {
+  if (!state.dragging) return;
+  state.dragging = false;
+}
+
+function strike() {
+  if (!canHumanAct() || state.engine.phase !== "aiming") return;
+  if (state.engine.shoot(state.aimAngle, state.power)) {
+    state.dragging = false;
+    updateControls();
+  }
+}
+
+canvas.addEventListener("pointerup", releaseAim);
+canvas.addEventListener("pointercancel", releaseAim);
 canvas.addEventListener("keydown", (event) => {
   if (!canHumanAct() || state.engine.phase !== "aiming") return;
   if (event.key === "ArrowLeft") state.aimAngle -= 0.035;
@@ -104,11 +128,31 @@ canvas.addEventListener("keydown", (event) => {
   if (event.key === "ArrowDown") state.power = Math.max(0.05, state.power - 0.05);
   if (event.key === " " || event.key === "Enter") {
     event.preventDefault();
-    state.engine.shoot(state.aimAngle, Math.max(0.35, state.power));
-    state.power = 0;
+    strike();
   }
-  byId("powerFill").style.width = `${Math.round(state.power * 100)}%`;
+  syncPowerControl();
 });
+
+byId("powerSlider").addEventListener("input", (event) => {
+  state.power = Number(event.target.value) / 100;
+  syncPowerControl();
+});
+byId("strikeButton").addEventListener("click", strike);
+
+function syncPowerControl() {
+  const value = Math.round(state.power * 100);
+  byId("powerSlider").value = String(value);
+  byId("powerValue").value = String(value);
+  byId("powerSlider").style.setProperty("--power", `${value}%`);
+}
+
+function updateControls() {
+  if (!state.engine) return;
+  const enabled = canHumanAct() && state.engine.phase === "aiming";
+  byId("powerSlider").disabled = !enabled;
+  byId("strikeButton").disabled = !enabled;
+  canvas.classList.toggle("disabled", !enabled && state.engine.phase !== "ballInHand");
+}
 
 function roundedRectangle(x, y, width, height, radius) {
   context.beginPath();
@@ -145,6 +189,16 @@ function drawTable() {
   roundedRectangle(TABLE.left, TABLE.top, TABLE.right - TABLE.left, TABLE.bottom - TABLE.top, 13);
   context.fillStyle = cloth;
   context.fill();
+
+  context.save();
+  context.setLineDash([6, 8]);
+  context.strokeStyle = "rgba(255,255,255,.16)";
+  context.lineWidth = 1.5;
+  context.beginPath();
+  context.moveTo(BAULK_X, TABLE.top + 4);
+  context.lineTo(BAULK_X, TABLE.bottom - 4);
+  context.stroke();
+  context.restore();
 
   context.fillStyle = "rgba(255,255,255,.4)";
   for (let index = 1; index < 4; index++) {
@@ -213,10 +267,19 @@ function drawAim() {
   context.setLineDash([7, 9]);
   context.lineWidth = 1.4;
   context.strokeStyle = "rgba(255,255,255,.65)";
+  const collision = projectedCollision(cue, angle);
+  const guideLength = collision ? collision.distance : 560;
   context.beginPath();
   context.moveTo(cue.x + Math.cos(angle) * 18, cue.y + Math.sin(angle) * 18);
-  context.lineTo(cue.x + Math.cos(angle) * 420, cue.y + Math.sin(angle) * 420);
+  context.lineTo(cue.x + Math.cos(angle) * guideLength, cue.y + Math.sin(angle) * guideLength);
   context.stroke();
+  if (collision) {
+    context.setLineDash([]);
+    context.strokeStyle = "rgba(255,255,255,.32)";
+    context.beginPath();
+    context.arc(collision.x, collision.y, BALL_RADIUS, 0, Math.PI * 2);
+    context.stroke();
+  }
   context.setLineDash([]);
   const pull = 28 + state.power * 75;
   const backX = cue.x - Math.cos(angle) * pull;
@@ -237,13 +300,37 @@ function drawAim() {
   context.restore();
 }
 
+function projectedCollision(cue, angle) {
+  const directionX = Math.cos(angle);
+  const directionY = Math.sin(angle);
+  let closest = null;
+  for (const ball of state.engine.balls) {
+    if (ball.id === 0 || ball.pocketed) continue;
+    const offsetX = ball.x - cue.x;
+    const offsetY = ball.y - cue.y;
+    const projection = offsetX * directionX + offsetY * directionY;
+    if (projection <= BALL_RADIUS * 2) continue;
+    const perpendicularSquared = offsetX * offsetX + offsetY * offsetY - projection * projection;
+    const collisionRadius = BALL_RADIUS * 2;
+    if (perpendicularSquared > collisionRadius * collisionRadius) continue;
+    const distance = projection - Math.sqrt(collisionRadius * collisionRadius - perpendicularSquared);
+    if (!closest || distance < closest.distance) {
+      closest = { distance, x: cue.x + directionX * distance, y: cue.y + directionY * distance };
+    }
+  }
+  return closest;
+}
+
 function drawBallInHand() {
   if (!canHumanAct() || state.engine.phase !== "ballInHand") return;
   context.save();
   context.fillStyle = "rgba(255,255,255,.9)";
   context.font = "600 16px Manrope, sans-serif";
   context.textAlign = "center";
-  context.fillText("BALL IN HAND · TAP A CLEAR POSITION", 500, 28);
+  const instruction = state.engine.ballInHandRule === "baulkForward"
+    ? "SCRATCH · TAP THE BAULK LINE · NEXT SHOT FORWARD ONLY"
+    : "BALL IN HAND · TAP A CLEAR POSITION";
+  context.fillText(instruction, 500, 28);
   context.restore();
 }
 
@@ -255,10 +342,20 @@ function render() {
 }
 
 function frame(now) {
-  const seconds = Math.min(0.04, (now - state.lastFrame) / 1000);
+  const seconds = Math.min(0.05, (now - state.lastFrame) / 1000);
   state.lastFrame = now;
   const wasMoving = state.engine.phase === "moving";
-  state.engine.step(seconds);
+  state.accumulator += seconds;
+  let simulations = 0;
+  while (state.accumulator >= FIXED_STEP && simulations < 14) {
+    state.engine.step(FIXED_STEP);
+    state.accumulator -= FIXED_STEP;
+    simulations++;
+    if (state.engine.phase !== "moving") {
+      state.accumulator = 0;
+      break;
+    }
+  }
   if (wasMoving && state.engine.phase !== "moving") scheduleCpu();
   render();
   requestAnimationFrame(frame);
@@ -266,11 +363,14 @@ function frame(now) {
 
 function scheduleCpu() {
   clearTimeout(state.cpuTimer);
-  if (state.engine.mode === "practice" || state.engine.currentPlayer !== 1 || state.engine.winner !== null) return;
+  if (state.engine.currentPlayer !== 1 || state.engine.winner !== null) return;
+  state.engine.message = "CueBot is reading the table…";
+  updateScore();
+  updateControls();
   state.cpuTimer = setTimeout(() => {
     const decision = state.engine.cpuDecision();
     if (decision) state.engine.shoot(decision.angle, decision.power);
-  }, 720);
+  }, 560);
 }
 
 function groupLabel(group) {
@@ -288,6 +388,7 @@ function updateScore() {
   byId("playerOne").classList.toggle("active", state.engine.currentPlayer === 0 && state.engine.winner === null);
   byId("playerTwo").classList.toggle("active", state.engine.currentPlayer === 1 && state.engine.winner === null);
   byId("turnMessage").textContent = state.engine.message;
+  updateControls();
 }
 
 async function showResult(event) {
@@ -349,8 +450,8 @@ function renderMode() {
   byId("deploymentStatus").textContent = status.label;
   byId("deploymentGate").classList.toggle("ready", status.ready);
   if (state.mode === "practice") {
-    byId("deploymentDetail").textContent = "Practice never requires a wallet or CUE.";
-    byId("startMatch").textContent = "Start practice";
+    byId("deploymentDetail").textContent = "Free play against CueBot never requires a wallet or CUE.";
+    byId("startMatch").textContent = "Start free match";
   } else if (status.ready) {
     byId("deploymentDetail").textContent = "Token, mode contract, and game service are configured.";
     byId("startMatch").textContent = state.mode === "ranked" ? "Find ranked match" : "Enter with CUE";
@@ -377,6 +478,11 @@ byId("tierSelect").addEventListener("change", () => {
 
 async function connectWallet() {
   const button = byId("gameWallet");
+  if (isNativeApp) {
+    const message = "Native wallet connection remains locked until the audited mobile wallet adapter is configured.";
+    byId("actionNotice").textContent = message;
+    throw new Error(message);
+  }
   button.disabled = true;
   try {
     state.wallet = await connectGameWallet();
@@ -420,7 +526,7 @@ byId("startMatch").addEventListener("click", async () => {
     }
   }
   newEngine(state.mode);
-  notice.textContent = state.mode === "practice" ? "Fresh practice rack ready." : "Local simulation only. No CUE was approved, locked, won, or lost.";
+  notice.textContent = state.mode === "practice" ? "Fresh free play rack ready. CueBot will take every opposing turn." : "Local simulation only. No CUE was approved, locked, won, or lost.";
   canvas.focus();
 });
 
@@ -430,7 +536,9 @@ byId("rackAgain").addEventListener("click", () => newEngine(state.mode));
 let audioContext;
 function playTone(frequency, duration) {
   if (!state.sound) return;
-  audioContext ||= new AudioContext();
+  const AudioEngine = window.AudioContext || window.webkitAudioContext;
+  if (!AudioEngine) return;
+  audioContext ||= new AudioEngine();
   const oscillator = audioContext.createOscillator();
   const gain = audioContext.createGain();
   oscillator.frequency.value = frequency;
@@ -440,6 +548,14 @@ function playTone(frequency, duration) {
   oscillator.connect(gain).connect(audioContext.destination);
   oscillator.start();
   oscillator.stop(audioContext.currentTime + duration);
+}
+
+async function haptic(style) {
+  try {
+    await window.Capacitor?.Plugins?.Haptics?.impact({ style });
+  } catch {
+    // Haptics are an enhancement and must never interrupt a match.
+  }
 }
 
 function setSound(enabled) {
@@ -463,11 +579,35 @@ async function loadArena() {
     text.textContent = label;
     await new Promise((resolve) => setTimeout(resolve, 180));
   }
-  await Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 800))]);
   byId("loadingScreen").classList.add("done");
 }
 
+function resizeRenderer() {
+  const scale = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+  if (scale === state.renderScale && canvas.width === LOGICAL_WIDTH * scale) return;
+  state.renderScale = scale;
+  canvas.width = Math.round(LOGICAL_WIDTH * scale);
+  canvas.height = Math.round(LOGICAL_HEIGHT * scale);
+  context.setTransform(scale, 0, 0, scale, 0, 0);
+}
+
+window.addEventListener("resize", resizeRenderer, { passive: true });
+document.addEventListener("visibilitychange", () => {
+  state.lastFrame = performance.now();
+  state.accumulator = 0;
+});
+
+resizeRenderer();
 newEngine();
 renderMode();
+syncPowerControl();
+if (isNativeApp) {
+  byId("gameWallet").textContent = "Wallet locked";
+  byId("gameWallet").title = "Activates with the audited mobile wallet adapter";
+}
 requestAnimationFrame(frame);
 void loadArena();
+
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(() => {}));
+}

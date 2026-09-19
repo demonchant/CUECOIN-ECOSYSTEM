@@ -2,7 +2,7 @@
 
 CueCoin is a fixed supply gaming economy for BNB Smart Chain. Its token symbol is `CUE`. The system combines taxed token transfers, player wagers, tournaments, rewards, achievements, referrals, governance, vesting, liquidity locks, an airdrop, and LayerZero based bridging.
 
-`CueStrike` is the first playable game foundation in the ecosystem: a competitive cue sport game built around practice, fair matchmaking, direct challenges, tournaments, achievements, and transparent CUE settlement. The browser prototype includes an original interface, local physics, eight ball rules, ball in hand, a CPU opponent, payout previews, and contract readiness gates. Chess, draughts, and additional skill based games are intended to follow after CueStrike establishes the shared player and settlement foundation.
+`CueStrike` is the first playable game foundation in the ecosystem: a competitive cue sport game built around free play, fair matchmaking, direct challenges, tournaments, achievements, and transparent CUE settlement. The game includes an original interface, fixed step physics, full local matches against CueBot, eight ball rules, CueStrike's baulk line scratch rule, mobile controls, payout previews, and contract readiness gates. The same game is packaged as an installable web app plus native Android and iOS projects. Chess, draughts, and additional skill based games are intended to follow after CueStrike establishes the shared player and settlement foundation.
 
 This repository is source code, tests, and deployment tooling. It is not a promise of profit. Do not deploy it with public funds until an independent audit, a testnet launch, operational rehearsals, and legal review are complete.
 
@@ -67,6 +67,16 @@ npm test
 To preview the airdrop portal and game locally, run `npm run web`, open `http://127.0.0.1:4173`, then choose Play CueStrike or open `http://127.0.0.1:4173/game/` directly. Run `npm run test:web` and `npm run test:game` for interface integrity checks. Before publishing, set only verified contract addresses, service URLs, and the legally reviewed terms URL in `config.js`.
 
 The current game is a local playable foundation, not a production real value multiplayer service. Live CUE entry remains locked until the token and mode contracts, authoritative game API, independent result oracles, monitoring, compliance controls, and security audits are ready. See `docs/GAME_ARCHITECTURE.md` for the production design and failure handling model.
+
+### Android and iOS development
+
+The native projects live in `android` and `ios`. They use Capacitor so the browser, Android, and iOS versions share the same rules engine and interface. Build and synchronize web assets with:
+
+```text
+npm run mobile:sync
+```
+
+Open Android Studio with `npm run mobile:android`. Open Xcode on macOS with `npm run mobile:ios`. Android release signing and Apple signing profiles are intentionally not stored in the repository. Native wallet connection still requires the production mobile wallet adapter before live CUE entry can be enabled.
 
 Dependencies are pinned in `package.json` and `package-lock.json`. The optimizer uses one run because `CueNFT` is close to the EVM deployment size ceiling. Do not change compiler settings without checking deployed bytecode size again.
 

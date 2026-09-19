@@ -18,7 +18,10 @@ const routes = new Map([
   ["/game/engine.js", "game/engine.js"],
   ["/game/economy.js", "game/economy.js"],
   ["/game/contracts.js", "game/contracts.js"],
+  ["/game/manifest.webmanifest", "game/manifest.webmanifest"],
+  ["/game/service-worker.js", "game/service-worker.js"],
   ["/assets/logoDark.jpg", "assets/logoDark.jpg"],
+  ["/assets/cuestrike-app-icon.png", "assets/cuestrike-app-icon.png"],
   ["/assets/slides/precision.jpg", "assets/slides/precision.jpg"],
   ["/assets/slides/tournament.jpg", "assets/slides/tournament.jpg"],
   ["/assets/slides/cuestrikeMobile.jpg", "assets/slides/cuestrikeMobile.jpg"],
@@ -28,7 +31,9 @@ const contentTypes = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
-  ".jpg": "image/jpeg"
+  ".jpg": "image/jpeg",
+  ".png": "image/png",
+  ".webmanifest": "application/manifest+json"
 };
 
 createServer((request, response) => {

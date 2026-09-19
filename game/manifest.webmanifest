@@ -1,0 +1,19 @@
+{
+  "name": "CueStrike by CueCoin",
+  "short_name": "CueStrike",
+  "description": "Skill first competitive cue sports powered by CueCoin.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#030b15",
+  "theme_color": "#030b15",
+  "icons": [
+    {
+      "src": "../assets/cuestrike-app-icon.png",
+      "sizes": "1536x1536",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

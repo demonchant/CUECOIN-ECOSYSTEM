@@ -2,10 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#030b15" />
     <meta name="description" content="Play the CueStrike skill game prototype and inspect its CueCoin contract settlement flows." />
     <title>CueStrike Arena</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="../assets/cuestrike-app-icon.png" />
+    <link rel="apple-touch-icon" href="../assets/cuestrike-app-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -36,11 +39,11 @@
           <span class="eyebrow">CueCoin skill gaming</span>
           <h1>Own the table.<br />Earn the result.</h1>
         </div>
-        <p>CueStrike begins as a complete skill first eight ball game. Practice is free. Competitive CUE settlement stays locked until audited contracts, compliance controls, authoritative servers, and independent result oracles are configured.</p>
+        <p>CueStrike begins as a skill first eight ball game. Free play against CueBot costs nothing. Competitive CUE settlement stays locked until audited contracts, compliance controls, authoritative servers, and independent result oracles are configured.</p>
       </section>
 
       <section class="modeStrip" id="modeStrip" aria-label="Game modes">
-        <button class="modeCard active" data-mode="practice" type="button"><span>Free</span><strong>Practice</strong><small>Learn every angle</small></button>
+        <button class="modeCard active" data-mode="practice" type="button"><span>Free</span><strong>Quick play</strong><small>Challenge CueBot</small></button>
         <button class="modeCard" data-mode="ranked" type="button"><span>Ranked</span><strong>Skill match</strong><small>Verified winner reward</small></button>
         <button class="modeCard" data-mode="wager" type="button"><span>1 against 1</span><strong>Direct match</strong><small>Equal CUE entry</small></button>
         <button class="modeCard" data-mode="sitAndGo" type="button"><span>16 players</span><strong>Quick bracket</strong><small>Two paid places</small></button>
@@ -56,8 +59,8 @@
               <b id="playerOneRemaining">7</b>
             </div>
             <div class="turnState">
-              <span id="modeLabel">Practice</span>
-              <strong id="turnMessage">Practice table ready</strong>
+              <span id="modeLabel">Free play</span>
+              <strong id="turnMessage">Free match ready. Break to begin.</strong>
             </div>
             <div class="player opponent" id="playerTwo">
               <b id="playerTwoRemaining">7</b>
@@ -67,7 +70,7 @@
           </div>
 
           <div class="canvasWrap" id="canvasWrap">
-            <canvas id="gameCanvas" width="1000" height="540" tabindex="0" aria-label="Interactive CueStrike pool table. Drag backwards from the cue ball to shoot."></canvas>
+            <canvas id="gameCanvas" width="1000" height="540" tabindex="0" aria-label="Interactive CueStrike pool table. Drag across the table to aim, choose power, then strike."></canvas>
             <div class="gameOverlay hidden" id="gameOverlay">
               <span id="resultEyebrow">Match complete</span>
               <h2 id="resultTitle">You win</h2>
@@ -77,8 +80,12 @@
           </div>
 
           <div class="controlBar">
-            <p><strong>How to shoot:</strong> drag backwards from the cue ball to aim and set power, then release. On a foul, tap a legal position to place the cue ball.</p>
-            <div class="powerMeter" aria-label="Shot power"><span id="powerFill"></span></div>
+            <p><strong>How to shoot:</strong> drag anywhere on the table to aim, choose power, then press Strike. On a foul, tap a clear position to place the cue ball.</p>
+            <div class="shotControls">
+              <label for="powerSlider"><span>Power</span><output id="powerValue">45</output></label>
+              <input id="powerSlider" type="range" min="5" max="100" value="45" aria-label="Shot power" />
+              <button id="strikeButton" type="button">Strike</button>
+            </div>
             <button id="resetGame" type="button">New rack</button>
           </div>
         </div>
@@ -86,8 +93,8 @@
         <aside class="matchPanel">
           <div class="panelHeading">
             <span id="modeEyebrow">No CUE at risk</span>
-            <h2 id="panelModeTitle">Practice</h2>
-            <p id="modeDescription">Learn the table and controls without a wallet or entry.</p>
+            <h2 id="panelModeTitle">Free play</h2>
+            <p id="modeDescription">Play a full rules match against CueBot without a wallet or entry.</p>
           </div>
 
           <div class="entryControls" id="entryControls">
@@ -102,11 +109,11 @@
           <div class="economyPreview" id="economyPreview"></div>
 
           <div class="deploymentGate" id="deploymentGate">
-            <span><i></i><b id="deploymentStatus">Local practice</b></span>
-            <p id="deploymentDetail">Practice never requires a wallet or CUE.</p>
+            <span><i></i><b id="deploymentStatus">Local free play</b></span>
+            <p id="deploymentDetail">Free play against CueBot never requires a wallet or CUE.</p>
           </div>
 
-          <button class="startButton" id="startMatch" type="button">Start practice</button>
+          <button class="startButton" id="startMatch" type="button">Start free match</button>
           <p class="actionNotice" id="actionNotice" role="status" aria-live="polite"></p>
         </aside>
       </section>
@@ -138,7 +145,7 @@
         <div class="ruleCards">
           <article><span>01</span><h3>Open table</h3><p>The first legally pocketed solid or stripe assigns groups. The eight ball never assigns a group.</p></article>
           <article><span>02</span><h3>Legal contact</h3><p>Hit your group first. After clearing it, the eight ball becomes your legal target.</p></article>
-          <article><span>03</span><h3>Fouls</h3><p>A scratch, no contact, or wrong first contact gives the opponent ball in hand.</p></article>
+          <article><span>03</span><h3>Fouls</h3><p>A white ball scratch places the opponent on the baulk line with a forward only shot. Other fouls give normal ball in hand.</p></article>
           <article><span>04</span><h3>Winning</h3><p>Clear your group, then legally pocket the eight ball. An early or foul eight ball loses the frame.</p></article>
           <article><span>05</span><h3>Disconnects</h3><p>The server heartbeat allows reconnection before an oracle verified forfeit can settle.</p></article>
           <article><span>06</span><h3>Financial safety</h3><p>No cards or cash forms. Paid entry uses exact CUE approval and BNB only for gas.</p></article>

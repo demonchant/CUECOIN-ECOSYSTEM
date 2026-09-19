@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { CueStrikeEngine, groupForBall, isValidFirstContact } from "../game/engine.js";
+import { BAULK_X, CueStrikeEngine, groupForBall, isValidFirstContact } from "../game/engine.js";
 import { airdropUnlock, directMatchPayout, sitAndGoPayout, tournamentPayout } from "../game/economy.js";
 
 describe("CueStrike game rules and economy", function () {
@@ -37,6 +37,29 @@ describe("CueStrike game rules and economy", function () {
     engine.resolveShot();
     expect(engine.phase).to.equal("ballInHand");
     expect(engine.message).to.contain("No rail");
+  });
+
+  it("hands free play to CueBot after the player misses", function () {
+    const engine = new CueStrikeEngine({ mode: "practice" });
+    engine.shotNumber = 2;
+    engine.shot = { player: 0, firstContact: 1, pocketed: [], scratch: false, railAfterContact: true, railBalls: new Set([1]) };
+    engine.resolveShot();
+    expect(engine.currentPlayer).to.equal(1);
+    expect(engine.players[1].name).to.equal("CueBot");
+    expect(engine.cpuDecision()).to.have.keys("angle", "power");
+  });
+
+  it("places a scratched cue ball on the baulk line and blocks backward shots", function () {
+    const engine = new CueStrikeEngine({ mode: "practice" });
+    engine.shotNumber = 2;
+    engine.shot = { player: 0, firstContact: 1, pocketed: [], scratch: true, railAfterContact: true, railBalls: new Set([1]) };
+    engine.resolveShot();
+    expect(engine.currentPlayer).to.equal(1);
+    expect(engine.ballInHandRule).to.equal("baulkForward");
+    expect(engine.placeCueBall(700, 210)).to.equal(true);
+    expect(engine.cueBall.x).to.equal(BAULK_X);
+    expect(engine.shoot(Math.PI, 0.5)).to.equal(false);
+    expect(engine.shoot(0, 0.5)).to.equal(true);
   });
 
   it("respots an eight ball made on the break", function () {

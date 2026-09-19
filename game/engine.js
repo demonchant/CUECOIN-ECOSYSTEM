@@ -1,5 +1,6 @@
 export const TABLE = Object.freeze({ left: 48, top: 48, right: 952, bottom: 492 });
 export const BALL_RADIUS = 11;
+export const BAULK_X = 270;
 const STOP_SPEED = 4;
 const MAX_SHOT_SPEED = 1180;
 const FRICTION = 0.992;
@@ -65,14 +66,16 @@ export class CueStrikeEngine {
     this.balls = createRack();
     this.players = [
       { name: "You", group: null },
-      { name: mode === "practice" ? "Practice table" : "CueBot", group: null }
+      { name: "CueBot", group: null }
     ];
     this.currentPlayer = 0;
     this.phase = "aiming";
     this.winner = null;
     this.shot = null;
     this.shotNumber = 0;
-    this.message = mode === "practice" ? "Practice table ready" : "Break to begin";
+    this.ballInHandRule = null;
+    this.mustShootForward = false;
+    this.message = mode === "practice" ? "Free match ready. Break to begin." : "Break to begin";
     this.onEvent({ type: "reset", message: this.message });
   }
 
@@ -92,10 +95,17 @@ export class CueStrikeEngine {
 
   shoot(angle, power) {
     if (this.phase !== "aiming" || this.winner !== null) return false;
+    if (this.mustShootForward && Math.cos(angle) <= 0.05) {
+      this.message = "After a scratch, the shot must travel forward from the baulk line.";
+      this.onEvent({ type: "invalidShot", reason: "backwardFromBaulk", message: this.message });
+      return false;
+    }
     const normalizedPower = Math.min(1, Math.max(0.04, power));
     this.cueBall.vx = Math.cos(angle) * MAX_SHOT_SPEED * normalizedPower;
     this.cueBall.vy = Math.sin(angle) * MAX_SHOT_SPEED * normalizedPower;
     this.phase = "moving";
+    this.mustShootForward = false;
+    this.ballInHandRule = null;
     this.shotNumber++;
     this.shot = {
       player: this.currentPlayer,
@@ -134,8 +144,8 @@ export class CueStrikeEngine {
       const decay = Math.pow(FRICTION, dt * 240);
       ball.vx *= decay;
       ball.vy *= decay;
-      this.resolveRail(ball);
       this.resolvePocket(ball);
+      if (!ball.pocketed) this.resolveRail(ball);
     }
     for (let i = 0; i < this.balls.length; i++) {
       const a = this.balls[i];
@@ -217,20 +227,6 @@ export class CueStrikeEngine {
 
   resolveShot() {
     if (!this.shot) return;
-    if (this.mode === "practice") {
-      if (this.shot.scratch) this.restoreCueBall();
-      if (this.shot.pocketed.includes(8)) {
-        this.message = "Eight ball pocketed. Rack again when ready.";
-        this.winner = 0;
-        this.phase = "ended";
-      } else {
-        this.phase = "aiming";
-        this.message = this.shot.pocketed.length ? "Clean pocket. Keep practising." : "Line up the next shot.";
-      }
-      this.onEvent({ type: "turn", message: this.message, player: 0 });
-      return;
-    }
-
     const playerIndex = this.shot.player;
     const opponentIndex = 1 - playerIndex;
     const player = this.players[playerIndex];
@@ -271,6 +267,8 @@ export class CueStrikeEngine {
 
     if (foul) {
       this.currentPlayer = opponentIndex;
+      this.ballInHandRule = this.shot.scratch ? "baulkForward" : "anywhere";
+      this.mustShootForward = this.shot.scratch;
       this.restoreCueBall();
       this.phase = "ballInHand";
       if (this.shot.scratch) this.message = "Scratch. Ball in hand.";
@@ -294,11 +292,11 @@ export class CueStrikeEngine {
     cue.pocketed = false;
     cue.vx = 0;
     cue.vy = 0;
-    cue.x = 255;
+    cue.x = this.ballInHandRule === "baulkForward" ? BAULK_X : 255;
     cue.y = 270;
     if (!this.canPlaceCueBall(cue.x, cue.y)) {
-      cue.x = 180;
-      cue.y = 210;
+      const availableY = [210, 330, 150, 390].find((y) => this.canPlaceCueBall(cue.x, y));
+      cue.y = availableY || 270;
     }
   }
 
@@ -321,11 +319,14 @@ export class CueStrikeEngine {
   }
 
   placeCueBall(x, y) {
-    if (this.phase !== "ballInHand" || !this.canPlaceCueBall(x, y)) return false;
-    Object.assign(this.cueBall, { x, y, vx: 0, vy: 0, pocketed: false });
+    const targetX = this.ballInHandRule === "baulkForward" ? BAULK_X : x;
+    if (this.phase !== "ballInHand" || !this.canPlaceCueBall(targetX, y)) return false;
+    Object.assign(this.cueBall, { x: targetX, y, vx: 0, vy: 0, pocketed: false });
     this.phase = "aiming";
-    this.message = `${this.players[this.currentPlayer].name} placed the cue ball`;
-    this.onEvent({ type: "placed", player: this.currentPlayer });
+    this.message = this.ballInHandRule === "baulkForward"
+      ? `${this.players[this.currentPlayer].name} placed the cue ball on the baulk line`
+      : `${this.players[this.currentPlayer].name} placed the cue ball`;
+    this.onEvent({ type: "placed", player: this.currentPlayer, rule: this.ballInHandRule });
     return true;
   }
 

@@ -15,14 +15,14 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { margin: 0; min-width: 320px; overflow-x: hidden; color: var(--ink); background: radial-gradient(circle at 80% 0, rgba(8,123,241,.2), transparent 32%), #030b15; font-family: "Manrope", sans-serif; }
+body { margin: 0; min-width: 320px; overflow-x: hidden; padding-bottom: env(safe-area-inset-bottom); color: var(--ink); background: radial-gradient(circle at 80% 0, rgba(8,123,241,.2), transparent 32%), #030b15; font-family: "Manrope", sans-serif; }
 button, input, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 a { color: inherit; text-decoration: none; }
 button { color: inherit; }
 
 .loadingScreen { position: fixed; z-index: 100; inset: 0; display: grid; place-content: center; justify-items: center; color: white; background: radial-gradient(circle at center, #0c3762, #02070d 65%); transition: opacity .5s ease, visibility .5s ease; }
-.loadingScreen.done { opacity: 0; visibility: hidden; pointer-events: none; }
+.loadingScreen.done { opacity: 0; visibility: hidden; pointer-events: none; transition: none; }
 .loaderMark { position: relative; display: grid; justify-items: center; gap: 22px; }
 .loaderMark span { width: 82px; height: 82px; border: 3px solid rgba(255,255,255,.12); border-top-color: var(--cyan); border-radius: 50%; animation: spin 1s linear infinite; box-shadow: 0 0 45px rgba(18,215,255,.18); }
 .loaderMark span::after { content: "8"; display: grid; place-items: center; width: 50px; height: 50px; margin: 13px; border-radius: 50%; color: white; background: linear-gradient(145deg,#0d1b29,#000); font-size: 25px; font-weight: 800; }
@@ -32,7 +32,7 @@ button { color: inherit; }
 .loadingScreen p { margin: 14px 0 0; color: #8ca4b9; font: 500 10px "DM Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.arenaHeader { position: sticky; z-index: 20; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 26px; min-height: 82px; padding: 12px max(24px, calc((100vw - 1440px) / 2)); border-bottom: 1px solid var(--line); background: rgba(3,11,21,.88); backdrop-filter: blur(22px); }
+.arenaHeader { position: sticky; z-index: 20; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 26px; min-height: calc(82px + env(safe-area-inset-top)); padding: calc(12px + env(safe-area-inset-top)) max(24px, calc((100vw - 1440px) / 2)) 12px; border-bottom: 1px solid var(--line); background: rgba(3,11,21,.88); backdrop-filter: blur(22px); }
 .gameBrand { display: flex; align-items: center; gap: 13px; }
 .gameBrand img { display: block; width: 142px; height: 42px; object-fit: cover; border-radius: 9px; }
 .gameBrand > span { display: grid; gap: 1px; }
@@ -41,7 +41,7 @@ button { color: inherit; }
 .headerStatus { display: flex; align-items: center; gap: 9px; color: #b9c8d6; font: 500 10px "DM Mono", monospace; text-transform: uppercase; }
 .headerStatus i, .deploymentGate i { width: 8px; height: 8px; border-radius: 50%; background: #f6b73c; box-shadow: 0 0 0 5px rgba(246,183,60,.1); }
 .headerActions { display: flex; align-items: center; gap: 9px; }
-.iconButton, .walletButton, .startButton, #resetGame, #rackAgain { border: 1px solid var(--line); border-radius: 12px; cursor: pointer; font-weight: 800; }
+.iconButton, .walletButton, .startButton, #resetGame, #rackAgain, #strikeButton { border: 1px solid var(--line); border-radius: 12px; cursor: pointer; font-weight: 800; }
 .iconButton { padding: 10px 13px; color: #b9c8d6; background: rgba(255,255,255,.035); font-size: 10px; }
 .walletButton, .startButton, #rackAgain { border: 0; background: linear-gradient(135deg,var(--blue),#075bd4); box-shadow: 0 14px 30px rgba(8,123,241,.25); }
 .walletButton { padding: 12px 17px; }
@@ -78,18 +78,29 @@ main { width: min(1440px, calc(100% - 40px)); margin-inline: auto; }
 .turnState span { color: var(--cyan); font: 500 9px "DM Mono", monospace; text-transform: uppercase; }
 .turnState strong { display: block; max-width: 280px; margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .canvasWrap { position: relative; aspect-ratio: 1000 / 540; min-height: 360px; background: #02080d; touch-action: none; }
-#gameCanvas { position: absolute; inset: 0; display: block; width: 100%; max-width: 100%; height: 100%; min-width: 0; cursor: crosshair; }
+#gameCanvas { position: absolute; inset: 0; display: block; width: 100%; max-width: 100%; height: 100%; min-width: 0; cursor: crosshair; image-rendering: auto; }
+#gameCanvas.disabled { cursor: wait; }
 .gameOverlay { position: absolute; inset: 0; z-index: 4; display: grid; place-content: center; justify-items: center; padding: 30px; text-align: center; background: rgba(2,8,13,.78); backdrop-filter: blur(12px); }
 .gameOverlay.hidden { display: none; }
 .gameOverlay span { color: var(--cyan); font: 500 10px "DM Mono", monospace; text-transform: uppercase; letter-spacing: .14em; }
 .gameOverlay h2 { margin: 12px 0 5px; font-size: clamp(42px,7vw,76px); letter-spacing: -.06em; }
 .gameOverlay p { max-width: 520px; color: #b7c7d4; }
 #rackAgain { margin-top: 18px; padding: 14px 21px; }
-.controlBar { display: grid; grid-template-columns: 1fr 170px auto; align-items: center; gap: 20px; min-height: 74px; padding: 14px 20px; border-top: 1px solid var(--line); }
+.controlBar { display: grid; grid-template-columns: minmax(210px,1fr) minmax(280px,420px) auto; align-items: center; gap: 20px; min-height: 88px; padding: 14px 20px; border-top: 1px solid var(--line); background: linear-gradient(180deg,rgba(2,9,16,.15),rgba(2,9,16,.5)); }
 .controlBar p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
 .controlBar p strong { color: #d8e5ef; }
-.powerMeter { height: 8px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.1); }
-.powerMeter span { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg,var(--green),#ffe25f,var(--danger)); transition: width .08s; }
+.shotControls { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 7px 12px; }
+.shotControls label { display: flex; justify-content: space-between; grid-column: 1; color: #8fa8bc; font: 500 8px "DM Mono",monospace; letter-spacing: .1em; text-transform: uppercase; }
+.shotControls output { color: white; }
+#powerSlider { --power: 45%; grid-column: 1; width: 100%; height: 18px; margin: 0; border: 0; outline: none; appearance: none; background: transparent; cursor: ew-resize; }
+#powerSlider::-webkit-slider-runnable-track { height: 8px; border-radius: 99px; background: linear-gradient(90deg,var(--green) 0,var(--cyan) var(--power),rgba(255,255,255,.1) var(--power)); }
+#powerSlider::-webkit-slider-thumb { width: 22px; height: 22px; margin-top: -7px; border: 3px solid white; border-radius: 50%; appearance: none; background: var(--blue); box-shadow: 0 4px 14px rgba(0,0,0,.5); }
+#powerSlider::-moz-range-track { height: 8px; border-radius: 99px; background: rgba(255,255,255,.1); }
+#powerSlider::-moz-range-progress { height: 8px; border-radius: 99px; background: linear-gradient(90deg,var(--green),var(--cyan)); }
+#powerSlider::-moz-range-thumb { width: 18px; height: 18px; border: 3px solid white; border-radius: 50%; background: var(--blue); }
+#strikeButton { grid-column: 2; grid-row: 1 / 3; min-width: 92px; min-height: 49px; border: 0; color: #02101d; background: linear-gradient(135deg,#49edb0,#17cfea); box-shadow: 0 12px 25px rgba(18,215,255,.18); text-transform: uppercase; letter-spacing: .06em; }
+#strikeButton:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
+#strikeButton:disabled, #powerSlider:disabled { opacity: .35; cursor: not-allowed; }
 #resetGame { padding: 10px 13px; color: #bfd0df; background: rgba(255,255,255,.04); }
 
 .matchPanel { display: flex; flex-direction: column; padding: 25px; border-radius: 26px; }
@@ -182,7 +193,7 @@ footer p { margin: 0; text-align: right; }
   .tablePanel, .canvasWrap { width: 100%; min-width: 0; }
   .controlBar { grid-template-columns: 1fr auto; gap: 12px; }
   .controlBar p { grid-column: 1 / -1; }
-  .powerMeter { width: 100%; }
+  .shotControls { min-width: 0; }
   .systemGrid { grid-template-columns: 1fr; }
   .flowPanel, .integrityPanel { padding: 26px 20px; }
   .actionFlow { display: flex; overflow-x: auto; }

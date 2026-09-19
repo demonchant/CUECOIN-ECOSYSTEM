@@ -14,10 +14,14 @@ The browser build is intentionally safe before deployment. Practice and local si
 4. After contact, a ball must enter a pocket or any ball must reach a rail.
 5. A legal break pockets a ball or drives at least four object balls to rails.
 6. An eight ball made on the break is respotted and does not decide the frame.
-7. A scratch, no contact, wrong first contact, illegal break, or no rail after contact gives ball in hand.
+7. A white ball scratch places the incoming player on the baulk line and permits only a forward shot. No contact, wrong first contact, illegal break, or no rail after contact gives normal ball in hand.
 8. Pocketing the eight ball after clearing the assigned group wins. An early eight ball or an eight ball on a foul loses.
 
-Production rules must add called pocket selection, shot clocks, break alternation, table specific pocket geometry, deliberate stalemate handling, and an off table ball policy before ranked launch. These settings must be versioned so both players and every oracle verify the same rule set.
+Production rules must add called pocket selection, shot clocks, break alternation, deliberate stalemate handling, and an off table ball policy before ranked launch. These settings must be versioned so both players and every oracle verify the same rule set.
+
+## Client targets
+
+The installable web app, Android project, and iOS project share the same deterministic rules and rendering code. Capacitor provides the native containers, landscape configuration, splash screens, icons, offline assets, and haptic feedback. Platform signing credentials remain outside source control. The mobile wallet adapter, push notifications, store privacy declarations, age ratings, and release signing must be completed before store submission.
 
 ## Modes and contract actions
 

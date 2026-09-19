@@ -9,12 +9,18 @@
     "test": "hardhat test",
     "test:web": "node scripts/checkWeb.js",
     "test:game": "node scripts/checkGame.js",
+    "test:mobile": "npm run mobile:build && node scripts/checkMobile.js",
+    "mobile:build": "node scripts/buildMobile.js",
+    "mobile:sync": "npm run mobile:build && cap sync",
+    "mobile:android": "npm run mobile:sync && cap open android",
+    "mobile:ios": "npm run mobile:sync && cap open ios",
     "clean": "hardhat clean",
     "web": "node scripts/serve.js",
     "deploy:testnet": "hardhat run scripts/deploy.js --network bsc_testnet",
     "deploy:mainnet": "hardhat run scripts/deploy.js --network bsc"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "@nomicfoundation/hardhat-ethers": "4.1.0",
     "@nomicfoundation/hardhat-ethers-chai-matchers": "3.0.11",
     "@nomicfoundation/hardhat-mocha": "3.1.0",
@@ -26,6 +32,13 @@
   },
   "overrides": {
     "diff": "8.0.3",
-    "serialize-javascript": "7.0.5"
+    "serialize-javascript": "7.0.5",
+    "uuid": "11.1.1"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.5.2"
   }
 }

@@ -16,9 +16,9 @@ export const TOURNAMENT_TIERS = Object.freeze([
 
 export const GAME_MODES = Object.freeze({
   practice: {
-    label: "Practice",
+    label: "Free play",
     eyebrow: "No CUE at risk",
-    description: "Learn the table and controls without a wallet or entry.",
+    description: "Play a full rules match against CueBot without a wallet or entry.",
     contract: "None"
   },
   ranked: {
@@ -97,7 +97,8 @@ export function actionPlan(mode, amount = 0) {
   if (mode === "practice") {
     return [
       { label: "Rack", detail: "No wallet and no CUE approval" },
-      { label: "Practice", detail: "Local skill session with no economic result" }
+      { label: "Compete", detail: "Full local match against CueBot" },
+      { label: "Finish", detail: "No economic result or token movement" }
     ];
   }
   if (mode === "ranked") {
