@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#030b15" />
+    <meta name="description" content="Play the CueStrike skill game prototype and inspect its CueCoin contract settlement flows." />
+    <title>CueStrike Arena</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="loadingScreen" id="loadingScreen" role="status" aria-live="polite">
+      <div class="loaderMark"><span></span><b>CUESTRIKE</b></div>
+      <div class="loaderTrack"><i id="loaderFill"></i></div>
+      <p id="loaderText">Preparing the table</p>
+    </div>
+    <header class="arenaHeader">
+      <a class="gameBrand" href="../" aria-label="Return to CueCoin">
+        <img src="../assets/logoDark.jpg" alt="CueCoin" />
+        <span><strong>CueStrike</strong><small>Playable foundation</small></span>
+      </a>
+      <div class="headerStatus"><i></i><span id="environmentLabel">Local test arena</span></div>
+      <div class="headerActions">
+        <button class="iconButton" id="soundToggle" type="button" aria-label="Toggle sound">Sound on</button>
+        <button class="iconButton" id="openSettings" type="button">Settings</button>
+        <button class="walletButton" id="gameWallet" type="button">Connect wallet</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="arenaIntro">
+        <div>
+          <span class="eyebrow">CueCoin skill gaming</span>
+          <h1>Own the table.<br />Earn the result.</h1>
+        </div>
+        <p>CueStrike begins as a complete skill first eight ball game. Practice is free. Competitive CUE settlement stays locked until audited contracts, compliance controls, authoritative servers, and independent result oracles are configured.</p>
+      </section>
+
+      <section class="modeStrip" id="modeStrip" aria-label="Game modes">
+        <button class="modeCard active" data-mode="practice" type="button"><span>Free</span><strong>Practice</strong><small>Learn every angle</small></button>
+        <button class="modeCard" data-mode="ranked" type="button"><span>Ranked</span><strong>Skill match</strong><small>Verified winner reward</small></button>
+        <button class="modeCard" data-mode="wager" type="button"><span>1 against 1</span><strong>Direct match</strong><small>Equal CUE entry</small></button>
+        <button class="modeCard" data-mode="sitAndGo" type="button"><span>16 players</span><strong>Quick bracket</strong><small>Two paid places</small></button>
+        <button class="modeCard" data-mode="tournament" type="button"><span>8 to 128</span><strong>Championship</strong><small>Tiered CUE entry</small></button>
+      </section>
+
+      <section class="playLayout">
+        <div class="tablePanel">
+          <div class="scoreBar">
+            <div class="player active" id="playerOne">
+              <span class="avatar">YOU</span>
+              <div><strong>You</strong><small id="playerOneGroup">Open table</small></div>
+              <b id="playerOneRemaining">7</b>
+            </div>
+            <div class="turnState">
+              <span id="modeLabel">Practice</span>
+              <strong id="turnMessage">Practice table ready</strong>
+            </div>
+            <div class="player opponent" id="playerTwo">
+              <b id="playerTwoRemaining">7</b>
+              <div><strong>CueBot</strong><small id="playerTwoGroup">Open table</small></div>
+              <span class="avatar bot">AI</span>
+            </div>
+          </div>
+
+          <div class="canvasWrap" id="canvasWrap">
+            <canvas id="gameCanvas" width="1000" height="540" tabindex="0" aria-label="Interactive CueStrike pool table. Drag backwards from the cue ball to shoot."></canvas>
+            <div class="gameOverlay hidden" id="gameOverlay">
+              <span id="resultEyebrow">Match complete</span>
+              <h2 id="resultTitle">You win</h2>
+              <p id="resultDetail"></p>
+              <button id="rackAgain" type="button">Rack again</button>
+            </div>
+          </div>
+
+          <div class="controlBar">
+            <p><strong>How to shoot:</strong> drag backwards from the cue ball to aim and set power, then release. On a foul, tap a legal position to place the cue ball.</p>
+            <div class="powerMeter" aria-label="Shot power"><span id="powerFill"></span></div>
+            <button id="resetGame" type="button">New rack</button>
+          </div>
+        </div>
+
+        <aside class="matchPanel">
+          <div class="panelHeading">
+            <span id="modeEyebrow">No CUE at risk</span>
+            <h2 id="panelModeTitle">Practice</h2>
+            <p id="modeDescription">Learn the table and controls without a wallet or entry.</p>
+          </div>
+
+          <div class="entryControls" id="entryControls">
+            <label for="tierSelect">Entry tier</label>
+            <select id="tierSelect"></select>
+            <label class="conditional hidden" id="tournamentIdLabel" for="tournamentId">Published tournament ID</label>
+            <input class="conditional hidden" id="tournamentId" type="number" min="1" inputmode="numeric" placeholder="Example: 12" />
+            <label class="conditional hidden" id="targetLabel" for="targetAddress">Private opponent wallet</label>
+            <input class="conditional hidden" id="targetAddress" type="text" inputmode="text" placeholder="Optional 0x address" />
+          </div>
+
+          <div class="economyPreview" id="economyPreview"></div>
+
+          <div class="deploymentGate" id="deploymentGate">
+            <span><i></i><b id="deploymentStatus">Local practice</b></span>
+            <p id="deploymentDetail">Practice never requires a wallet or CUE.</p>
+          </div>
+
+          <button class="startButton" id="startMatch" type="button">Start practice</button>
+          <p class="actionNotice" id="actionNotice" role="status" aria-live="polite"></p>
+        </aside>
+      </section>
+
+      <section class="systemGrid">
+        <article class="flowPanel">
+          <span class="eyebrow">Contract matched flow</span>
+          <h2>One action trail from entry to settlement.</h2>
+          <div class="actionFlow" id="actionFlow"></div>
+        </article>
+        <article class="integrityPanel">
+          <span class="eyebrow">Fair play architecture</span>
+          <h2>The player device cannot award itself CUE.</h2>
+          <ul>
+            <li><b>Deterministic physics</b><span>Inputs and outcomes become a replayable event transcript.</span></li>
+            <li><b>Authoritative server</b><span>The production server validates timing, collisions, fouls, and final state.</span></li>
+            <li><b>Oracle certificates</b><span>Contracts accept signed results with nonces and short expiries.</span></li>
+            <li><b>Protected settlement</b><span>Timeouts refund, forfeits require proof, and duplicate results are rejected.</span></li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="rulesSection">
+        <div class="rulesHeading">
+          <span class="eyebrow">CueStrike rules</span>
+          <h2>Skill first. No paid advantage.</h2>
+          <p>Cosmetics and NFT rewards may change appearance or contract bonuses, but they never alter aim, power, physics, collision, turn rules, or matchmaking skill.</p>
+        </div>
+        <div class="ruleCards">
+          <article><span>01</span><h3>Open table</h3><p>The first legally pocketed solid or stripe assigns groups. The eight ball never assigns a group.</p></article>
+          <article><span>02</span><h3>Legal contact</h3><p>Hit your group first. After clearing it, the eight ball becomes your legal target.</p></article>
+          <article><span>03</span><h3>Fouls</h3><p>A scratch, no contact, or wrong first contact gives the opponent ball in hand.</p></article>
+          <article><span>04</span><h3>Winning</h3><p>Clear your group, then legally pocket the eight ball. An early or foul eight ball loses the frame.</p></article>
+          <article><span>05</span><h3>Disconnects</h3><p>The server heartbeat allows reconnection before an oracle verified forfeit can settle.</p></article>
+          <article><span>06</span><h3>Financial safety</h3><p>No cards or cash forms. Paid entry uses exact CUE approval and BNB only for gas.</p></article>
+        </div>
+      </section>
+    </main>
+
+    <footer><span>CueStrike by CueCoin</span><a href="../">Return to airdrop portal</a><p>Playable local foundation. No real value settlement is active.</p></footer>
+
+    <dialog class="settingsDialog" id="settingsDialog">
+      <form method="dialog">
+        <div class="dialogTop"><div><span>Game preferences</span><h2>Settings</h2></div><button value="close" aria-label="Close settings">Close</button></div>
+        <label><span>Aim guide</span><input id="aimGuideSetting" type="checkbox" checked /></label>
+        <label><span>Table motion</span><input id="motionSetting" type="checkbox" checked /></label>
+        <label><span>Sound effects</span><input id="soundSetting" type="checkbox" checked /></label>
+        <p>Competitive physics and rule validation cannot be changed by player settings.</p>
+      </form>
+    </dialog>
+
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.17.0/dist/ethers.umd.min.js"></script>
+    <script src="../config.js"></script>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

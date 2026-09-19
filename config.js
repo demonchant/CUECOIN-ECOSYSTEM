@@ -6,6 +6,14 @@ window.CUE_CONFIG = Object.freeze({
   explorerUrl: "https://bscscan.com",
   airdropAddress: "",
   taskRegistryAddress: "",
+  cueCoinAddress: "",
+  escrowAddress: "",
+  rewardsPoolAddress: "",
+  sitAndGoAddress: "",
+  tournamentAddress: "",
+  nftAddress: "",
+  referralAddress: "",
+  gameApiUrl: "",
   proofApiUrl: "",
   termsUrl: ""
 });

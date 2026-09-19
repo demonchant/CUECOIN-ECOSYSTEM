@@ -2,7 +2,7 @@
 
 CueCoin is a fixed supply gaming economy for BNB Smart Chain. Its token symbol is `CUE`. The system combines taxed token transfers, player wagers, tournaments, rewards, achievements, referrals, governance, vesting, liquidity locks, an airdrop, and LayerZero based bridging.
 
-`CueStrike` is the planned first crown jewel of the ecosystem: a competitive mobile snooker game built around practice, fair matchmaking, direct challenges, tournaments, achievements, and transparent CUE settlement. Chess, draughts, and additional skill based games are intended to follow after CueStrike establishes the shared player and settlement foundation. The games are future products and are not included in this smart contract repository today.
+`CueStrike` is the first playable game foundation in the ecosystem: a competitive cue sport game built around practice, fair matchmaking, direct challenges, tournaments, achievements, and transparent CUE settlement. The browser prototype includes an original interface, local physics, eight ball rules, ball in hand, a CPU opponent, payout previews, and contract readiness gates. Chess, draughts, and additional skill based games are intended to follow after CueStrike establishes the shared player and settlement foundation.
 
 This repository is source code, tests, and deployment tooling. It is not a promise of profit. Do not deploy it with public funds until an independent audit, a testnet launch, operational rehearsals, and legal review are complete.
 
@@ -64,7 +64,9 @@ npm run compile
 npm test
 ```
 
-To preview the airdrop portal locally, run `npm run web` and open `http://127.0.0.1:4173`. Before publishing it, set the verified contract addresses, proof service URL, and legally reviewed terms URL in `config.js`.
+To preview the airdrop portal and game locally, run `npm run web`, open `http://127.0.0.1:4173`, then choose Play CueStrike or open `http://127.0.0.1:4173/game/` directly. Run `npm run test:web` and `npm run test:game` for interface integrity checks. Before publishing, set only verified contract addresses, service URLs, and the legally reviewed terms URL in `config.js`.
+
+The current game is a local playable foundation, not a production real value multiplayer service. Live CUE entry remains locked until the token and mode contracts, authoritative game API, independent result oracles, monitoring, compliance controls, and security audits are ready. See `docs/GAME_ARCHITECTURE.md` for the production design and failure handling model.
 
 Dependencies are pinned in `package.json` and `package-lock.json`. The optimizer uses one run because `CueNFT` is close to the EVM deployment size ceiling. Do not change compiler settings without checking deployed bytecode size again.
 

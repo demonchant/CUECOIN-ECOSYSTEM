@@ -10,6 +10,14 @@ const routes = new Map([
   ["/styles.css", "styles.css"],
   ["/app.js", "app.js"],
   ["/config.js", "config.js"],
+  ["/game", "game/index.html"],
+  ["/game/", "game/index.html"],
+  ["/game/index.html", "game/index.html"],
+  ["/game/styles.css", "game/styles.css"],
+  ["/game/app.js", "game/app.js"],
+  ["/game/engine.js", "game/engine.js"],
+  ["/game/economy.js", "game/economy.js"],
+  ["/game/contracts.js", "game/contracts.js"],
   ["/assets/logoDark.jpg", "assets/logoDark.jpg"],
   ["/assets/slides/precision.jpg", "assets/slides/precision.jpg"],
   ["/assets/slides/tournament.jpg", "assets/slides/tournament.jpg"],
@@ -40,5 +48,6 @@ createServer((request, response) => {
   });
   createReadStream(join(root, file)).pipe(response);
 }).listen(port, "127.0.0.1", () => {
-  console.log(`CueCoin airdrop portal: http://127.0.0.1:${port}`);
+  console.log(`CueCoin portal: http://127.0.0.1:${port}`);
+  console.log(`CueStrike arena: http://127.0.0.1:${port}/game/`);
 });

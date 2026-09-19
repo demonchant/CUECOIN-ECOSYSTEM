@@ -8,6 +8,7 @@
     "compile": "hardhat build",
     "test": "hardhat test",
     "test:web": "node scripts/checkWeb.js",
+    "test:game": "node scripts/checkGame.js",
     "clean": "hardhat clean",
     "web": "node scripts/serve.js",
     "deploy:testnet": "hardhat run scripts/deploy.js --network bsc_testnet",
